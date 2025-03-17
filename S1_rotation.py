@@ -1,7 +1,11 @@
 import numpy as np
 
 
-''' theta is the cartesian space element '''
+'''
+theta is the cartesian space element
+z = np.cos(theta) + i * np.sin(theta) is the lie group element
+tau_hat = i * theta is the lie algebra element
+'''
 
 def group_element(theta):
     z = np.cos(theta) + 1j * np.sin(theta)

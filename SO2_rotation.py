@@ -1,7 +1,11 @@
 import numpy as np
 
 
-''' theta is the cartesian space element '''
+'''
+theta is the cartesian space element, where theta is the angle in radians
+R = [cos(theta), -sin(theta); sin(theta), cos(theta)] is the group element
+theta_hat = [0, -theta; theta, 0] is the algebra element
+'''
 
 def group_element(theta):
     R = np.array([[np.cos(theta), -np.sin(theta)], [np.sin(theta), np.cos(theta)]])
@@ -17,15 +21,15 @@ def group_action(R, x):
     return R @ x
 
 def algebra_element(theta):
-    tau_hat = np.array([[0, -theta], [theta, 0]])
-    return tau_hat
+    theta_hat = np.array([[0, -theta], [theta, 0]])
+    return theta_hat
 
 def hat(theta):
-    tau_hat = np.array([[0, -theta], [theta, 0]])
-    return tau_hat
+    theta_hat = np.array([[0, -theta], [theta, 0]])
+    return theta_hat
 
-def vee(tau_hat):
-    theta = tau_hat[1, 0]
+def vee(theta_hat):
+    theta = theta_hat[1, 0]
     return theta
 
 def Exp(theta):
@@ -77,6 +81,12 @@ def jacobian_minus_right_1(R1, R2):
 
 def jacobian_minus_right_2(R1, R2):
     return -1.
+
+def jacobian_rotation_action_1(R, v):
+    return R @ np.array([[0, -1], [1, 0]]) @ v
+
+def jacobian_rotation_action_2(R, v):
+    return R
 
 
 def testing(R, theta):
