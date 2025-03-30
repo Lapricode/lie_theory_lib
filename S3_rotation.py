@@ -1,7 +1,12 @@
 import numpy as np
 
 
-'''  '''
+'''
+is the 
+is the cartesian space element
+is the group element
+is the algebra element
+'''
 
 def group_element(w, v1, v2, v3):
     pass

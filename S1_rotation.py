@@ -32,6 +32,16 @@ def vee(tau_hat):
     theta = tau_hat.imag
     return theta
 
+def exp(tau_hat):
+    theta = -1j * tau_hat
+    z = np.cos(theta) + 1j * np.sin(theta)
+    return z
+
+def log(z):
+    theta = np.angle(z)
+    tau_hat = 1j * theta
+    return tau_hat
+
 def Exp(theta):
     return np.exp(1j * theta)  # np.exp(1j * theta) = np.cos(theta) + 1j * np.sin(theta)
 

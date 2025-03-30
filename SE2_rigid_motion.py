@@ -2,13 +2,16 @@ import numpy as np
 
 
 '''
-[rho, theta]^T is the cartesian space element, where rho is the translation vector and theta is the rotation angle in radians
+tau = [rho; theta] is the cartesian space element, where rho \in R^{2x1} is the translation vector and theta \in R is the rotation angle in radians
 M = [R, t; 0, 1] is the group element, where R \in R^{2x2} is the rotation matrix and t \in R^{2x1} is the translation vector
 tau_hat = [theta_hat, rho; 0, 1] is the algebra element, where theta_hat = [0, -theta; theta, 0]
 '''
+tol = 1e-5  # tolerance for numerical issues
 
-def group_element(R, t):
-    M = np.block([[R, t], [np.zeros((1, 2)),  1]])
+def group_element(rho, theta):
+    R = np.array([[np.cos(theta), -np.sin(theta)], [np.sin(theta), np.cos(theta)]])
+    t = V(theta) @ rho
+    M = np.block([[R, t], [np.zeros((1, 2)),  1.]])
     return M
 
 def group_composition(M1, M2):
@@ -23,42 +26,130 @@ def group_action(M, x):
     return M @ x
 
 def algebra_element(rho, theta):
-    theta_hat = np.array([[0, -theta], [theta, 0]])
+    theta_hat = np.array([[0., -theta], [theta, 0.]])
     tau_hat = np.block([[theta_hat, rho], [np.zeros((1, 3))]])
     return tau_hat
 
-# def hat(theta, u):
-#     tavec_hat = theta * np.array([[0, -u[2], u[1]], [u[2], 0, -u[0]], [-u[1], u[0], 0]])
-#     return tavec_hat
+def hat(rho, theta):
+    theta_hat = np.array([[0., -theta], [theta, 0.]])
+    tau_hat = np.block([[theta_hat, rho], [np.zeros((1, 3))]])
+    return tau_hat
 
-# def vee(v_hat):
-#     v = np.array([v_hat[2, 1], v_hat[0, 2], v_hat[1, 0]])
-#     theta = np.linalg.norm(v)
-#     u = v / theta
-#     return theta, u
+def vee(tau_hat):
+    rho = tau_hat[:2, 2]
+    theta = tau_hat[1, 0]
+    return rho, theta
 
-# def Exp(theta, u):
-#     R = np.eye(3) + np.sin(theta) * vec_hat(u) + (1. - np.cos(theta)) * vec_hat(u) @ vec_hat(u)
-#     return R
+def exp(tau_hat):
+    rho = tau_hat[:2, 2]
+    theta = tau_hat[1, 0]
+    Exp_theta = np.array([[np.cos(theta), -np.sin(theta)], [np.sin(theta), np.cos(theta)]])
+    M = np.block([[Exp_theta, V(theta) @ rho], [np.zeros((1, 2)),  1.]])
+    return M
 
-# def Log(R):
-#     theta = np.arccos((np.trace(R) - 1.) / 2.)
-#     vec_hat = (R - R.T) / (2. * np.sin(theta))
-#     u = vee(vec_hat)
-#     return theta, u
+def log(M):
+    R = M[:2, :2]
+    t = M[:2, 2]
+    theta = np.arctan2(R[1, 0], R[0, 0])
+    theta_hat = np.array([[0., -theta], [theta, 0.]])
+    rho = Vinv(theta) @ t
+    tau_hat = np.block([[theta_hat, rho], [np.zeros((1, 2)), 1.]])
+    return tau_hat
 
-# def plus_right(R, theta, u):
-#     return R @ Exp(theta, u)
+def Exp(rho, theta):
+    Exp_theta = np.array([[np.cos(theta), -np.sin(theta)], [np.sin(theta), np.cos(theta)]])
+    M = np.block([[Exp_theta, V(theta) @ rho], [np.zeros((1, 2)),  1.]])
+    return M
 
-# def plus_left(R, theta, u):
-#     return Exp(theta, u) @ R
+def Log(M):
+    R = M[:2, :2]
+    t = M[:2, 2]
+    theta = np.arctan2(R[1, 0], R[0, 0])
+    rho = Vinv(theta) @ t
+    return rho, theta
 
-# def minus_right(R1, R2):
-#     return Log(R2.T @ R1)
+def plus_right(M, rho, theta):
+    return M @ Exp(rho, theta)
 
-# def minus_left(R1, R2):
-#     return Log(R1 @ R2.T)
+def plus_left(M, rho, theta):
+    return Exp(rho, theta) @ M
+
+def minus_right(M1, M2):
+    return Log(M2.T @ M1)
+
+def minus_left(M1, M2):
+    return Log(M1 @ M2.T)
+
+def adjoint(M):
+    R = M[:2, :2]
+    t = M[:2, 2]
+    return np.block([[R, -np.array([[0., -1.], [1., 0.]]) @ t], [np.zeros(1, 2), 1.]])
+
+def jacobian_inverse(M):
+    return -adjoint(M)
+
+def jacobian_composition_1(M1, M2):
+    M2_inv = group_inverse(M2)
+    return adjoint(M2_inv)
+
+def jacobian_composition_2(R1, R2):
+    return np.eye(3)
+
+def jacobian_right(rho, theta):
+    rho1, rho2 = rho[0, 0], rho[1, 0]
+    if abs(theta) >= tol:
+        Jr = np.array([[np.sin(theta) / theta, (1. - np.cos(theta)) / theta, (theta * rho1 - rho2 + rho2 * np.cos(theta) - rho1 * np.sin(theta)) / theta**2], \
+                        [(np.cos(theta) - 1.) / theta, np.sin(theta) / theta, (rho1 + theta * rho2 - rho1 * np.cos(theta) - rho2 * np.sin(theta)) / theta**2], \
+                        [0., 0., 1.]])
+    else:
+        Jr = np.block([[np.eye(2), np.array([[-rho2 / 2.], [rho1 / 2.]])], [np.zeros(1, 2), 1.]])
+    return Jr
+
+def jacobian_right_inverse(rho, theta):
+    Jrinv = np.linalg.inv(jacobian_right(rho, theta))
+    return Jrinv
+
+def jacobian_left(rho, theta):
+    rho1, rho2 = rho[0, 0], rho[1, 0]
+    Jl = np.array([[], [], []])
+    return Jl
+
+def jacobian_left_inverse(rho, theta):
+    Jlinv = np.linalg.inv(jacobian_left(rho, theta))
+    return Jlinv
+
+# def jacobian_plus_right_1(M, rho, theta):
+#     return
+
+# def jacobian_plus_right_2(M, rho, theta):
+#     return
+
+# def jacobian_minus_right_1(M1, M2):
+#     return
+
+# def jacobian_minus_right_2(M1, M2):
+#     return
+
+def jacobian_rotation_action_1(M, p):
+    R = M[:2, :2]
+    return np.block([[R, R @ np.array([[0., -1.], [1., 0.]]) @ p], [np.zeros(1, 3)]])
+
+def jacobian_rotation_action_2(M, p):
+    R = M[:2, :2]
+    return np.block([[R, np.zeros((2, 1))], [np.zeros(1, 3)]])
+
+def V(theta):
+    return np.sin(theta) / theta * np.eye(2) + (1 - np.cos(theta)) / theta * np.array([[0, -1], [1, 0]]) if abs(theta) >= tol else np.eye(2)
+
+def Vinv(theta):
+    return theta / (2 * (1 - np.cos(theta))) * (np.sin(theta) * np.eye(2) - (1 - np.cos(theta)) * np.array([[0, -1], [1, 0]])) if abs(theta) >= tol else np.eye(2)
 
 
 def testing():
-    pass
+    rho = np.array([[2.], [5.]])
+    theta = tol
+    print(np.rad2deg(theta))
+    Jr = jacobian_right(rho, theta)
+    print(Jr)
+
+# testing()
