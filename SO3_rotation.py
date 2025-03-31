@@ -2,7 +2,7 @@ import numpy as np
 
 
 '''
-v = theta * u (angle-axis representation) is the cartesian space element, where theta is the angle in radians and u is the 3d unit vector along the axis of rotation
+v = theta * u (angle-axis representation) is the cartesian space element, where theta \in R is the angle in radians and u \in R^3 unit vector along the axis of rotation
 R = I + sin(theta) * u_hat + (1 - cos(theta)) * u_hat^2 is the group element
 v_hat = theta * u_hat is the algebra element, where u_hat = [0, -u3, u2; u3, 0, -u1; -u2, u1, 0]
 '''

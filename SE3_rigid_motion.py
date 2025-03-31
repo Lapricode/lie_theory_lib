@@ -2,8 +2,8 @@ import numpy as np
 
 
 '''
-tau = [rho; theta * u] is the cartesian space element, where rho \in R^{3x1} is the translation vector and theta * u \in R^{3x1} is the angle-axis representation
-M = [R, t; 0, 1] is the group element, where R \in R^{3x3} is the rotation matrix and t \in R^{3x1} is the translation vector
+tau = [rho; theta * u] is the cartesian space element, where rho \in R^3 is the translation vector and theta * u \in R^3 is the angle-axis representation
+M = [R, t; 0, 1] is the group element, where R \in R^{3x3} is the rotation matrix and t \in R^3 is the translation vector
 tau_hat = [theta * u_hat, rho; 0, 1] is the algebra element, where u_hat = [0, -u3, u2; u3, 0, -u1; -u2, u1, 0]
 '''
 tol = 1e-5  # tolerance for numerical issues
@@ -12,7 +12,7 @@ def group_element(rho, theta, u):
     u_hat = vec_hat(u)
     R = np.eye(3) + np.sin(theta) * u_hat + (1 - np.cos(theta)) * u_hat @ u_hat
     t = V(theta) @ rho
-    M = np.block([[R, t], [np.zeros((1, 3)), 1.]])
+    M = np.block([[R, t.reshape(-1, 1)], [np.zeros((1, 3)), 1.]])
     return M
 
 def group_composition(M1, M2):
@@ -21,19 +21,19 @@ def group_composition(M1, M2):
 def group_inverse(M):
     R = M[:3, :3]
     t = M[:3, 3]
-    return np.block([[R.T, -R.T @ t], [np.zeros((1, 3)), 1.]])
+    return np.block([[R.T, -R.T @ t.reshape(-1, 1)], [np.zeros((1, 3)), 1.]])
 
 def group_action(M, x):
     return M @ x
 
 def algebra_element(rho, theta, u):
     v_hat = theta * vec_hat(u)
-    tau_hat = np.block([[v_hat, rho], [np.zeros((1, 4))]])
+    tau_hat = np.block([[v_hat, rho.reshape(-1, 1)], [np.zeros((1, 4))]])
     return tau_hat
 
 def hat(rho, theta, u):
     v_hat = theta * vec_hat(u)
-    tau_hat = np.block([[v_hat, rho], [np.zeros((1, 4))]])
+    tau_hat = np.block([[v_hat, rho.reshape(-1, 1)], [np.zeros((1, 4))]])
     return tau_hat
 
 def vee(tau_hat):
@@ -79,6 +79,18 @@ def adjoint(M):
 
 # def jacobian_composition_2(R1, R2):
 #     return np.eye(3)
+
+# def jacobian_right(rho, theta, u):
+#     return
+
+# def jacobian_right_inverse(rho, theta, u):
+#     return
+
+# def jacobian_left(rho, theta, u):
+#     return
+
+# def jacobian_left_inverse(rho, theta, u):
+#     return
 
 # def jacobian_plus_right_1(M, rho, theta, u):
 #     return
