@@ -75,10 +75,10 @@ def plus_left(M, rho, theta):
     return Exp(rho, theta) @ M
 
 def minus_right(M1, M2):
-    return Log(M2.T @ M1)
+    return Log(group_inverse(M2) @ M1)
 
 def minus_left(M1, M2):
-    return Log(M1 @ M2.T)
+    return Log(M1 @ group_inverse(M2))
 
 def adjoint(M):
     R = M[:2, :2]
@@ -111,32 +111,37 @@ def jacobian_right_inverse(rho, theta):
 
 def jacobian_left(rho, theta):
     rho1, rho2 = rho[0, 0], rho[1, 0]
-    Jl = np.array([[], [], []])
+    if abs(theta) >= tol:
+        Jl = np.array([[np.sin(theta) / theta, (np.cos(theta) - 1.) / theta, (theta * rho1 + rho2 - rho2 * np.cos(theta) - rho1 * np.sin(theta)) / theta**2], \
+                        [(1. - np.cos(theta)) / theta, np.sin(theta) / theta, (-rho1 + theta * rho2 + rho1 * np.cos(theta) - rho2 * np.sin(theta)) / theta**2], \
+                        [0., 0., 1.]])
+    else:
+        Jl = np.block([[np.eye(2), np.array([[rho2 / 2.], [-rho1 / 2.]])], [np.zeros((1, 2)), 1.]])
     return Jl
 
 def jacobian_left_inverse(rho, theta):
     Jlinv = np.linalg.inv(jacobian_left(rho, theta))
     return Jlinv
 
-# def jacobian_plus_right_1(M, rho, theta):
-#     return
+def jacobian_plus_right_1(M, rho, theta):
+    return 
 
-# def jacobian_plus_right_2(M, rho, theta):
-#     return
+def jacobian_plus_right_2(M, rho, theta):
+    return 
 
-# def jacobian_minus_right_1(M1, M2):
-#     return
+def jacobian_minus_right_1(M1, M2):
+    return 
 
-# def jacobian_minus_right_2(M1, M2):
-#     return
+def jacobian_minus_right_2(M1, M2):
+    return 
 
 def jacobian_rotation_action_1(M, p):
     R = M[:2, :2]
-    return np.block([[R, R @ np.array([[0., -1.], [1., 0.]]) @ p.reshape(-1, 1)], [np.zeros((1, 3))]])
+    return np.block([R, R @ np.array([[0., -1.], [1., 0.]]) @ p.reshape(-1, 1)])
 
 def jacobian_rotation_action_2(M, p):
     R = M[:2, :2]
-    return np.block([[R, np.zeros((2, 1))], [np.zeros((1, 3))]])
+    return R
 
 def V(theta):
     return np.sin(theta) / theta * np.eye(2) + (1 - np.cos(theta)) / theta * np.array([[0, -1], [1, 0]]) if abs(theta) >= tol else np.eye(2)
