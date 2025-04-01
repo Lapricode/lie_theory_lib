@@ -8,7 +8,8 @@ tau_hat = [theta * u_hat, rho; 0, 1] is the algebra element, where u_hat = [0, -
 '''
 tol = 1e-5  # tolerance for numerical issues
 
-def group_element(rho, theta, u):
+def group_element(tau):
+    rho, theta, u = decompose_cartesian_element(tau)
     u_hat = vec_hat(u)
     R = np.eye(3) + np.sin(theta) * u_hat + (1 - np.cos(theta)) * u_hat @ u_hat
     t = V(theta) @ rho
@@ -26,7 +27,8 @@ def group_inverse(M):
 def group_action(M, x):
     return M @ x
 
-def algebra_element(rho, theta, u):
+def algebra_element(tau):
+    rho, theta, u = decompose_cartesian_element(tau)
     v_hat = theta * vec_hat(u)
     tau_hat = np.block([[v_hat, rho.reshape(-1, 1)], [np.zeros((1, 4))]])
     return tau_hat
@@ -41,7 +43,8 @@ def decompose_cartesian_element(tau):
     u = v / theta if abs(theta) >= tol else np.array([0., 0., 1.])
     return rho, theta, u
 
-def hat(rho, theta, u):
+def hat(tau):
+    rho, theta, u = decompose_cartesian_element(tau)
     v_hat = theta * vec_hat(u)
     tau_hat = np.block([[v_hat, rho.reshape(-1, 1)], [np.zeros((1, 4))]])
     return tau_hat
@@ -51,7 +54,7 @@ def vee(tau_hat):
     v = np.array([tau_hat[2, 1], tau_hat[0, 2], tau_hat[1, 0]])
     theta = np.linalg.norm(v)
     u = v / theta if abs(theta) >= tol else np.array([0., 0., 1.])
-    return rho, theta, u
+    return compose_cartesian_element(rho, theta, u)
 
 def exp(tau_hat):
     rho = tau_hat[:3, 3]
@@ -73,7 +76,8 @@ def log(M):
     tau_hat = np.block([[v_hat, rho.reshape(-1, 1)], [np.zeros((1, 4))]])
     return tau_hat
 
-def Exp(rho, theta, u):
+def Exp(tau):
+    rho, theta, u = decompose_cartesian_element(tau)
     u_hat = vec_hat(u)
     Exp_theta = np.eye(3) + np.sin(theta) * u_hat + (1 - np.cos(theta)) * u_hat @ u_hat
     M = np.block([[Exp_theta, V(theta, u) @ rho.reshape(-1, 1)], [np.zeros((1, 3)), 1.]])
@@ -87,13 +91,13 @@ def Log(M):
     u = np.array([v_hat[2, 1], v_hat[0, 2], v_hat[1, 0]]) / theta if abs(theta) >= tol else np.array([0., 0., 1.])
     rho = Vinv(theta, u) @ t
     u = np.array([v_hat[2, 1], v_hat[0, 2], v_hat[1, 0]]) / theta if abs(theta) >= tol else np.array([0., 0., 1.])
-    return rho, theta, u
+    return compose_cartesian_element(rho, theta, u)
 
-def plus_right(M, rho, theta, u):
-    return M @ Exp(rho, theta, u)
+def plus_right(M, tau):
+    return M @ Exp(tau)
 
-def plus_left(M, rho, theta, u):
-    return Exp(rho, theta, u) @ M
+def plus_left(M, tau):
+    return Exp(tau) @ M
 
 def minus_right(M1, M2):
     return Log(group_inverse(M2) @ M1)
@@ -117,23 +121,27 @@ def jacobian_composition_1(M1, M2):
 def jacobian_composition_2(R1, R2):
     return np.eye(6)
 
-def jacobian_right(rho, theta, u):
+def jacobian_right(tau):
+    rho, theta, u = decompose_cartesian_element(tau)
     return np.block([[Jl_theta(-theta, u), Q(-rho, -theta, u)], [np.zeros((3, 3)), Jl_theta(-theta, u)]])
 
-def jacobian_right_inverse(rho, theta, u):
+def jacobian_right_inverse(tau):
+    rho, theta, u = decompose_cartesian_element(tau)
     return np.block([[Jl_inv_theta(-theta, u), -Jl_inv_theta(-theta, u) @ Q(-rho, -theta, u) @ Jl_inv_theta(-theta, u)], [np.zeros((3, 3)), Jl_inv_theta(-theta, u)]])
 
-def jacobian_left(rho, theta, u):
+def jacobian_left(tau):
+    rho, theta, u = decompose_cartesian_element(tau)
     return np.block([[Jl_theta(theta, u), Q(rho, theta, u)], [np.zeros((3, 3)), Jl_theta(theta, u)]])
 
-def jacobian_left_inverse(rho, theta, u):
+def jacobian_left_inverse(tau):
+    rho, theta, u = decompose_cartesian_element(tau)
     return np.block([[Jl_inv_theta(theta, u), -Jl_inv_theta(theta, u) @ Q(rho, theta, u) @ Jl_inv_theta(theta, u)], [np.zeros((3, 3)), Jl_inv_theta(theta, u)]])
 
-def jacobian_plus_right_1(M, rho, theta, u):
-    return adjoint(group_inverse(Exp(rho, theta, u)))
+def jacobian_plus_right_1(M, tau):
+    return adjoint(group_inverse(Exp(tau)))
 
-def jacobian_plus_right_2(M, rho, theta, u):
-    return jacobian_right(rho, theta, u)
+def jacobian_plus_right_2(M, tau):
+    return jacobian_right(tau)
 
 def jacobian_minus_right_1(M1, M2):
     return -jacobian_left_inverse(minus_right(M1, M2))

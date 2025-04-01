@@ -8,7 +8,8 @@ v_hat = theta * u_hat is the algebra element, where u_hat = [0, -u3, u2; u3, 0, 
 '''
 tol = 1e-5  # tolerance for numerical issues
 
-def group_element(theta, u):
+def group_element(v):
+    theta, u = decompose_cartesian_element(v)
     u_hat = vec_hat(u)
     R = np.eye(3) + np.sin(theta) * u_hat + (1 - np.cos(theta)) * u_hat @ u_hat
     return R
@@ -22,7 +23,8 @@ def group_inverse(R):
 def group_action(R, x):
     return R @ x
 
-def algebra_element(theta, u):
+def algebra_element(v):
+    theta, u = decompose_cartesian_element(v)
     v_hat = theta * vec_hat(u)
     return v_hat
 
@@ -34,7 +36,8 @@ def decompose_cartesian_element(v):
     u = v / theta if abs(theta) >= tol else np.array([0., 0., 1.])
     return theta, u
 
-def hat(theta, u):
+def hat(v):
+    theta, u = decompose_cartesian_element(v)
     v_hat = theta * vec_hat(u)
     return v_hat
 
@@ -42,7 +45,7 @@ def vee(v_hat):
     v = np.array([v_hat[2, 1], v_hat[0, 2], v_hat[1, 0]])
     theta = np.linalg.norm(v)
     u = v / theta if abs(theta) >= tol else np.array([0., 0., 1.])
-    return theta, u
+    return compose_cartesian_element(theta, u)
 
 def exp(v_hat):
     v = np.array([v_hat[2, 1], v_hat[0, 2], v_hat[1, 0]])
@@ -57,7 +60,8 @@ def log(R):
     v_hat = theta * (R - R.T) / (2. * np.sin(theta)) if abs(theta) >= tol else (R - R.T) / 2.
     return v_hat
 
-def Exp(theta, u):
+def Exp(v):
+    theta, u = decompose_cartesian_element(v)
     u_hat = vec_hat(u)
     R = np.eye(3) + np.sin(theta) * u_hat + (1. - np.cos(theta)) * u_hat @ u_hat
     return R
@@ -67,13 +71,13 @@ def Log(R):
     v_hat = theta * (R - R.T) / (2. * np.sin(theta)) if abs(theta) >= tol else (R - R.T) / 2.
     v = np.array([v_hat[2, 1], v_hat[0, 2], v_hat[1, 0]])
     u = v / theta if abs(theta) >= tol else np.array([0., 0., 1.])
-    return theta, u
+    return compose_cartesian_element(theta, u)
 
-def plus_right(R, theta, u):
-    return R @ Exp(theta, u)
+def plus_right(R, v):
+    return R @ Exp(v)
 
-def plus_left(R, theta, u):
-    return Exp(theta, u) @ R
+def plus_left(R, v):
+    return Exp(v) @ R
 
 def minus_right(R1, R2):
     return Log(R2.T @ R1)
@@ -93,19 +97,23 @@ def jacobian_composition_1(R1, R2):
 def jacobian_composition_2(R1, R2):
     return np.eye(3)
 
-def jacobian_right(theta, u):
+def jacobian_right(v):
+    theta, u = decompose_cartesian_element(v)
     u_hat = vec_hat(u)
     return np.eye(3) - (1 - np.cos(theta)) / theta * u_hat + (theta - np.sin(theta)) / theta * u_hat @ u_hat if abs(theta) >= tol else np.eye(3)
 
-def jacobian_right_inverse(theta, u):
+def jacobian_right_inverse(v):
+    theta, u = decompose_cartesian_element(v)
     u_hat = vec_hat(u)
     return np.eye(3) + 0.5 * theta * u_hat + (1. - 0.5 * theta * (1. + np.cos(theta)) / np.sin(theta)) * u_hat @ u_hat if abs(theta) >= tol else np.eye(3)
 
-def jacobian_left(theta, u):
+def jacobian_left(v):
+    theta, u = decompose_cartesian_element(v)
     u_hat = vec_hat(u)
     return np.eye(3) + (1 - np.cos(theta)) / theta * u_hat + (theta - np.sin(theta)) / theta * u_hat @ u_hat if abs(theta) >= tol else np.eye(3)
 
-def jacobian_left_inverse(theta, u):
+def jacobian_left_inverse(v):
+    theta, u = decompose_cartesian_element(v)
     u_hat = vec_hat(u)
     return np.eye(3) - 0.5 * theta * u_hat + (1. - 0.5 * theta * (1. + np.cos(theta)) / np.sin(theta)) * u_hat @ u_hat if abs(theta) >= tol else np.eye(3)
 
@@ -114,21 +122,19 @@ def jacobian_plus_right_1(R, theta, u):
     R = np.eye(3) + np.sin(theta) * u_hat + (1. - np.cos(theta)) * u_hat @ u_hat
     return R.T
 
-def jacobian_plus_right_2(R, theta, u):
-    return jacobian_right(theta, u)
+def jacobian_plus_right_2(R, v):
+    return jacobian_right(v)
 
 def jacobian_minus_right_1(R1, R2):
-    theta, u = Log(R2.T @ R1)
-    return jacobian_right_inverse(theta, u)
+    return jacobian_right_inverse(Log(R2.T @ R1))
 
 def jacobian_minus_right_2(R1, R2):
-    theta, u = Log(R2.T @ R1)
-    return -jacobian_left_inverse(theta, u)
+    return -jacobian_left_inverse(Log(R2.T @ R1))
 
-def jacobian_rotation_action_1(R, v):
-    return -R @ vec_hat(v)
+def jacobian_rotation_action_1(R, x):
+    return -R @ vec_hat(x)
 
-def jacobian_rotation_action_2(R, v):
+def jacobian_rotation_action_2(R, x):
     return R
 
 def vec_hat(v):

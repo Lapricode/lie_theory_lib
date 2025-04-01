@@ -8,7 +8,8 @@ tau_hat = [theta_hat, rho; 0, 1] is the algebra element, where theta_hat = [0, -
 '''
 tol = 1e-5  # tolerance for numerical issues
 
-def group_element(rho, theta):
+def group_element(tau):
+    rho, theta = decompose_cartesian_element(tau)
     R = np.array([[np.cos(theta), -np.sin(theta)], [np.sin(theta), np.cos(theta)]])
     t = V(theta) @ rho
     M = np.block([[R, t.reshape(-1, 1)], [np.zeros((1, 2)),  1.]])
@@ -25,7 +26,8 @@ def group_inverse(M):
 def group_action(M, x):
     return M @ x
 
-def algebra_element(rho, theta):
+def algebra_element(tau):
+    rho, theta = decompose_cartesian_element(tau)
     theta_hat = np.array([[0., -theta], [theta, 0.]])
     tau_hat = np.block([[theta_hat, rho.reshape(-1, 1)], [np.zeros((1, 3))]])
     return tau_hat
@@ -38,7 +40,8 @@ def decompose_cartesian_element(tau):
     theta = tau[2]
     return rho, theta
 
-def hat(rho, theta):
+def hat(tau):
+    rho, theta = decompose_cartesian_element(tau)
     theta_hat = np.array([[0., -theta], [theta, 0.]])
     tau_hat = np.block([[theta_hat, rho.reshape(-1, 1)], [np.zeros((1, 3))]])
     return tau_hat
@@ -46,7 +49,7 @@ def hat(rho, theta):
 def vee(tau_hat):
     rho = tau_hat[:2, 2]
     theta = tau_hat[1, 0]
-    return rho, theta
+    return compose_cartesian_element(rho, theta)
 
 def exp(tau_hat):
     rho = tau_hat[:2, 2]
@@ -64,7 +67,8 @@ def log(M):
     tau_hat = np.block([[theta_hat, rho.reshape(-1, 1)], [np.zeros((1, 2)), 1.]])
     return tau_hat
 
-def Exp(rho, theta):
+def Exp(tau):
+    rho, theta = decompose_cartesian_element(tau)
     Exp_theta = np.array([[np.cos(theta), -np.sin(theta)], [np.sin(theta), np.cos(theta)]])
     M = np.block([[Exp_theta, V(theta) @ rho.reshape(-1, 1)], [np.zeros((1, 2)),  1.]])
     return M
@@ -74,13 +78,13 @@ def Log(M):
     t = M[:2, 2]
     theta = np.arctan2(R[1, 0], R[0, 0])
     rho = Vinv(theta) @ t
-    return rho, theta
+    return compose_cartesian_element(rho, theta)
 
-def plus_right(M, rho, theta):
-    return M @ Exp(rho, theta)
+def plus_right(M, tau):
+    return M @ Exp(tau)
 
-def plus_left(M, rho, theta):
-    return Exp(rho, theta) @ M
+def plus_left(M, tau):
+    return Exp(tau) @ M
 
 def minus_right(M1, M2):
     return Log(group_inverse(M2) @ M1)
@@ -103,7 +107,8 @@ def jacobian_composition_1(M1, M2):
 def jacobian_composition_2(R1, R2):
     return np.eye(3)
 
-def jacobian_right(rho, theta):
+def jacobian_right(tau):
+    rho, theta = decompose_cartesian_element(tau)
     rho1, rho2 = rho[0, 0], rho[1, 0]
     if abs(theta) >= tol:
         Jr = np.array([[np.sin(theta) / theta, (1. - np.cos(theta)) / theta, (theta * rho1 - rho2 + rho2 * np.cos(theta) - rho1 * np.sin(theta)) / theta**2], \
@@ -113,11 +118,12 @@ def jacobian_right(rho, theta):
         Jr = np.block([[np.eye(2), np.array([[-rho2 / 2.], [rho1 / 2.]])], [np.zeros((1, 2)), 1.]])
     return Jr
 
-def jacobian_right_inverse(rho, theta):
-    Jrinv = np.linalg.inv(jacobian_right(rho, theta))
+def jacobian_right_inverse(tau):
+    Jrinv = np.linalg.inv(jacobian_right(tau))
     return Jrinv
 
-def jacobian_left(rho, theta):
+def jacobian_left(tau):
+    rho, theta = decompose_cartesian_element(tau)
     rho1, rho2 = rho[0, 0], rho[1, 0]
     if abs(theta) >= tol:
         Jl = np.array([[np.sin(theta) / theta, (np.cos(theta) - 1.) / theta, (theta * rho1 + rho2 - rho2 * np.cos(theta) - rho1 * np.sin(theta)) / theta**2], \
@@ -127,15 +133,15 @@ def jacobian_left(rho, theta):
         Jl = np.block([[np.eye(2), np.array([[rho2 / 2.], [-rho1 / 2.]])], [np.zeros((1, 2)), 1.]])
     return Jl
 
-def jacobian_left_inverse(rho, theta):
-    Jlinv = np.linalg.inv(jacobian_left(rho, theta))
+def jacobian_left_inverse(tau):
+    Jlinv = np.linalg.inv(jacobian_left(tau))
     return Jlinv
 
-def jacobian_plus_right_1(M, rho, theta):
-    return adjoint(group_inverse(Exp(rho, theta)))
+def jacobian_plus_right_1(M, tau):
+    return adjoint(group_inverse(Exp(tau)))
 
-def jacobian_plus_right_2(M, rho, theta):
-    return jacobian_right(rho, theta)
+def jacobian_plus_right_2(M, tau):
+    return jacobian_right(tau)
 
 def jacobian_minus_right_1(M1, M2):
     return -jacobian_left_inverse(minus_right(M1, M2))
