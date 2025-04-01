@@ -24,6 +24,12 @@ def algebra_element(theta):
     tau_hat = 1j * theta
     return tau_hat
 
+def compose_cartesian_element(theta):
+    return theta
+
+def decompose_cartesian_element(theta):
+    return theta
+
 def hat(theta):
     tau_hat = 1j * theta
     return tau_hat

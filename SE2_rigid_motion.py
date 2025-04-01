@@ -30,6 +30,14 @@ def algebra_element(rho, theta):
     tau_hat = np.block([[theta_hat, rho.reshape(-1, 1)], [np.zeros((1, 3))]])
     return tau_hat
 
+def compose_cartesian_element(rho, theta):
+    return np.block([rho, theta])
+
+def decompose_cartesian_element(tau):
+    rho = tau[:2]
+    theta = tau[2]
+    return rho, theta
+
 def hat(rho, theta):
     theta_hat = np.array([[0., -theta], [theta, 0.]])
     tau_hat = np.block([[theta_hat, rho.reshape(-1, 1)], [np.zeros((1, 3))]])

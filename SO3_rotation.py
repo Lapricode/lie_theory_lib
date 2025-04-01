@@ -26,6 +26,14 @@ def algebra_element(theta, u):
     v_hat = theta * vec_hat(u)
     return v_hat
 
+def compose_cartesian_element(theta, u):
+    return theta * u
+
+def decompose_cartesian_element(v):
+    theta = np.linalg.norm(v)
+    u = v / theta if abs(theta) >= tol else np.array([0., 0., 1.])
+    return theta, u
+
 def hat(theta, u):
     v_hat = theta * vec_hat(u)
     return v_hat
@@ -33,13 +41,13 @@ def hat(theta, u):
 def vee(v_hat):
     v = np.array([v_hat[2, 1], v_hat[0, 2], v_hat[1, 0]])
     theta = np.linalg.norm(v)
-    u = v / theta if abs(theta) >= tol else np.array([[0.], [0.], [1.]])
+    u = v / theta if abs(theta) >= tol else np.array([0., 0., 1.])
     return theta, u
 
 def exp(v_hat):
     v = np.array([v_hat[2, 1], v_hat[0, 2], v_hat[1, 0]])
     theta = np.linalg.norm(v)
-    u = v / theta if abs(theta) >= tol else np.array([[0.], [0.], [1.]])
+    u = v / theta if abs(theta) >= tol else np.array([0., 0., 1.])
     u_hat = vec_hat(u)
     R = np.eye(3) + np.sin(theta) * u_hat + (1 - np.cos(theta)) * u_hat @ u_hat
     return R
@@ -58,7 +66,7 @@ def Log(R):
     theta = np.arccos((np.trace(R) - 1.) / 2.)
     v_hat = theta * (R - R.T) / (2. * np.sin(theta)) if abs(theta) >= tol else (R - R.T) / 2.
     v = np.array([v_hat[2, 1], v_hat[0, 2], v_hat[1, 0]])
-    u = v / theta if abs(theta) >= tol else np.array([[0.], [0.], [1.]])
+    u = v / theta if abs(theta) >= tol else np.array([0., 0., 1.])
     return theta, u
 
 def plus_right(R, theta, u):

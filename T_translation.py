@@ -25,6 +25,12 @@ def algebra_element(t):
     t_hat = np.block([[np.zeros((np.size(t), np.size(t))), t.reshape(-1, 1)], [np.zeros((1, np.size(t))), 0.]])
     return t_hat
 
+def compose_cartesian_element(t):
+    return t
+
+def decompose_cartesian_element(t):
+    return t
+
 def hat(t):
     t_hat = np.block([[np.zeros((np.size(t), np.size(t))), t.reshape(-1, 1)], [np.zeros((1, np.size(t))), 0.]])
     return t_hat

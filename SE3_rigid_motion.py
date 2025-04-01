@@ -31,6 +31,16 @@ def algebra_element(rho, theta, u):
     tau_hat = np.block([[v_hat, rho.reshape(-1, 1)], [np.zeros((1, 4))]])
     return tau_hat
 
+def compose_cartesian_element(rho, theta, u):
+    return np.block([rho, theta * u])
+
+def decompose_cartesian_element(tau):
+    rho = tau[:3]
+    v = tau[3:]
+    theta = np.linalg.norm(v)
+    u = v / theta if abs(theta) >= tol else np.array([0., 0., 1.])
+    return rho, theta, u
+
 def hat(rho, theta, u):
     v_hat = theta * vec_hat(u)
     tau_hat = np.block([[v_hat, rho.reshape(-1, 1)], [np.zeros((1, 4))]])
@@ -40,14 +50,14 @@ def vee(tau_hat):
     rho = tau_hat[:3, 3]
     v = np.array([tau_hat[2, 1], tau_hat[0, 2], tau_hat[1, 0]])
     theta = np.linalg.norm(v)
-    u = v / theta if abs(theta) >= tol else np.array([[0.], [0.], [1.]])
+    u = v / theta if abs(theta) >= tol else np.array([0., 0., 1.])
     return rho, theta, u
 
 def exp(tau_hat):
     rho = tau_hat[:3, 3]
     v = np.array([tau_hat[2, 1], tau_hat[0, 2], tau_hat[1, 0]])
     theta = np.linalg.norm(v)
-    u = v / theta if abs(theta) >= tol else np.array([[0.], [0.], [1.]])
+    u = v / theta if abs(theta) >= tol else np.array([0., 0., 1.])
     u_hat = vec_hat(u)
     Exp_theta = np.eye(3) + np.sin(theta) * u_hat + (1 - np.cos(theta)) * u_hat @ u_hat
     M = np.block([[Exp_theta, V(theta, u) @ rho.reshape(-1, 1)], [np.zeros((1, 3)), 1.]])
@@ -57,8 +67,9 @@ def log(M):
     R = M[:3, :3]
     t = M[:3, 3]
     theta = np.arccos((np.trace(R) - 1.) / 2.)
-    rho = Vinv(theta, t) @ t
     v_hat = theta * (R - R.T) / (2. * np.sin(theta)) if abs(theta) >= tol else (R - R.T) / 2.
+    u = np.array([v_hat[2, 1], v_hat[0, 2], v_hat[1, 0]]) / theta if abs(theta) >= tol else np.array([0., 0., 1.])
+    rho = Vinv(theta, u) @ t
     tau_hat = np.block([[v_hat, rho.reshape(-1, 1)], [np.zeros((1, 4))]])
     return tau_hat
 
@@ -72,10 +83,10 @@ def Log(M):
     R = M[:3, :3]
     t = M[:3, 3]
     theta = np.arccos((np.trace(R) - 1.) / 2.)
-    rho = Vinv(theta, t) @ t
     v_hat = theta * (R - R.T) / (2. * np.sin(theta)) if abs(theta) >= tol else (R - R.T) / 2.
-    v = np.array([v_hat[2, 1], v_hat[0, 2], v_hat[1, 0]])
-    u = v / theta if abs(theta) >= tol else np.array([[0.], [0.], [1.]])
+    u = np.array([v_hat[2, 1], v_hat[0, 2], v_hat[1, 0]]) / theta if abs(theta) >= tol else np.array([0., 0., 1.])
+    rho = Vinv(theta, u) @ t
+    u = np.array([v_hat[2, 1], v_hat[0, 2], v_hat[1, 0]]) / theta if abs(theta) >= tol else np.array([0., 0., 1.])
     return rho, theta, u
 
 def plus_right(M, rho, theta, u):

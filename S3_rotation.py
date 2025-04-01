@@ -23,6 +23,12 @@ def group_action():
 def algebra_element():
     pass
 
+def compose_cartesian_element():
+    pass
+
+def decompose_cartesian_element():
+    pass
+
 def hat():
     pass
 

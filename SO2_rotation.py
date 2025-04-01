@@ -24,6 +24,12 @@ def algebra_element(theta):
     theta_hat = np.array([[0., -theta], [theta, 0.]])
     return theta_hat
 
+def compose_cartesian_element(theta):
+    return theta
+
+def decompose_cartesian_element(theta):
+    return theta
+
 def hat(theta):
     theta_hat = np.array([[0., -theta], [theta, 0.]])
     return theta_hat
