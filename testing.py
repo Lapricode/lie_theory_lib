@@ -10,4 +10,12 @@ J_o_w = np.zeros((SE3.DoF, SE3.DoF))
 
 X_plus_w = X.plus(w, J_o_x, J_o_w)
 
+print(X)
+print(w)
 print(X_plus_w)
+print(X + w)
+# print(J_o_x)
+# print(J_o_w)
+X = np.array(X).reshape(-1,)
+w = np.array(w).reshape(-1,)
+print(w[0])

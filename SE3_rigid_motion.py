@@ -119,16 +119,16 @@ def jacobian_left_inverse(rho, theta, u):
     return np.block([[Jl_inv_theta(theta, u), -Jl_inv_theta(theta, u) @ Q(rho, theta, u) @ Jl_inv_theta(theta, u)], [np.zeros((3, 3)), Jl_inv_theta(theta, u)]])
 
 def jacobian_plus_right_1(M, rho, theta, u):
-    return 
+    return adjoint(group_inverse(Exp(rho, theta, u)))
 
 def jacobian_plus_right_2(M, rho, theta, u):
-    return 
+    return jacobian_right(rho, theta, u)
 
 def jacobian_minus_right_1(M1, M2):
-    return 
+    return -jacobian_left_inverse(minus_right(M1, M2))
 
 def jacobian_minus_right_2(M1, M2):
-    return 
+    return jacobian_right_inverse(minus_right(M1, M2))
 
 def jacobian_rotation_action_1(M, p):
     R = M[:3, :3]
