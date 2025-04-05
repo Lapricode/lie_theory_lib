@@ -27,7 +27,6 @@ delta = 0.01 * np.random.randn(6)
 
 g1 = pin.exp6(xi1)
 g2 = pin.exp6(xi2)
-
 pin_start_time = time.time()
 pin_comp = g1 * g2
 pin_inv = g1.inverse()
@@ -36,6 +35,8 @@ pin_right_plus = g1 * pin.exp6(delta)
 pin_right_minus = pin.log6(g2.inverse() * g1)
 pin_left_plus = pin.exp6(delta) * g1
 pin_left_minus = pin.log6(g1 * g2.inverse())
+pin_right_jacobian = pin.Jexp6(delta)
+# pin_right_jacobian_inv = pin.Jlog6(delta)
 pin_end_time = time.time()
 
 # # Compute the right Jacobian at the tangent vector xi1, and its inverse
@@ -57,8 +58,7 @@ print(f"Right plus: {np.array(pin_right_plus)}")
 print(f"Right minus: {np.array(pin_right_minus)}")
 print(f"Left plus: {np.array(pin_left_plus)}")
 print(f"Left minus: {np.array(pin_left_minus)}")
-# print("\nRight Jacobian at xi1:")
-# print(Jr)
+print(f"Right Jacobian: {np.array(pin_right_jacobian)}")
 
 
 import SE3_rigid_motion as mySE3
@@ -73,6 +73,7 @@ my_right_plus = mySE3.plus_right(g1, delta)
 my_right_minus = mySE3.minus_right(g1, g2)
 my_left_plus = mySE3.plus_left(g1, delta)
 my_left_minus = mySE3.minus_left(g1, g2)
+my_right_jacobian = mySE3.jacobian_right(delta)
 my_end_time = time.time()
 
 print()
@@ -88,6 +89,7 @@ print("my_right_plus".ljust(left_width) + "==".ljust(equal_width) + "pin_right_p
 print("my_right_minus".ljust(left_width) + "==".ljust(equal_width) + "pin_right_minus".ljust(right_width) + str(np.allclose(my_right_minus, pin_right_minus)))
 print("my_left_plus".ljust(left_width) + "==".ljust(equal_width) + "pin_left_plus".ljust(right_width) + str(np.allclose(my_left_plus, pin_left_plus)))
 print("my_left_minus".ljust(left_width) + "==".ljust(equal_width) + "pin_left_minus".ljust(right_width) + str(np.allclose(my_left_minus, pin_left_minus)))
+print("my_right_jacobian".ljust(left_width) + "==".ljust(equal_width) + "pin_right_jacobian".ljust(right_width) + str(np.allclose(my_right_jacobian, pin_right_jacobian)))
 
 print()
 left_padding = 50

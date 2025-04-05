@@ -12,7 +12,7 @@ def group_element(tau):
     rho, theta, u = decompose_cartesian_element(tau)
     u_hat = vec_hat(u)
     R = np.eye(3) + np.sin(theta) * u_hat + (1 - np.cos(theta)) * u_hat @ u_hat
-    t = V(theta) @ rho
+    t = V(theta, u) @ rho
     M = np.block([[R, t.reshape(-1, 1)], [np.zeros((1, 3)), 1.]])
     return M
 
@@ -123,19 +123,27 @@ def jacobian_composition_2(R1, R2):
 
 def jacobian_right(tau):
     rho, theta, u = decompose_cartesian_element(tau)
-    return np.block([[Jl_theta(-theta, u), Q(-rho, -theta, u)], [np.zeros((3, 3)), Jl_theta(-theta, u)]])
+    Jl = Jl_mat(-theta, u)
+    Q = Q_mat(-rho, -theta, u)
+    return np.block([[Jl, Q], [np.zeros((3, 3)), Jl]])
 
 def jacobian_right_inverse(tau):
     rho, theta, u = decompose_cartesian_element(tau)
-    return np.block([[Jl_inv_theta(-theta, u), -Jl_inv_theta(-theta, u) @ Q(-rho, -theta, u) @ Jl_inv_theta(-theta, u)], [np.zeros((3, 3)), Jl_inv_theta(-theta, u)]])
+    Jl_inv = Jl_inv_mat(-theta, u)
+    Q = Q_mat(-rho, -theta, u)
+    return np.block([[Jl_inv, -Jl_inv @ Q @ Jl_inv], [np.zeros((3, 3)), Jl_inv]])
 
 def jacobian_left(tau):
     rho, theta, u = decompose_cartesian_element(tau)
-    return np.block([[Jl_theta(theta, u), Q(rho, theta, u)], [np.zeros((3, 3)), Jl_theta(theta, u)]])
+    Jl = Jl_mat(theta, u)
+    Q = Q_mat(rho, theta, u)
+    return np.block([[Jl, Q], [np.zeros((3, 3)), Jl]])
 
 def jacobian_left_inverse(tau):
     rho, theta, u = decompose_cartesian_element(tau)
-    return np.block([[Jl_inv_theta(theta, u), -Jl_inv_theta(theta, u) @ Q(rho, theta, u) @ Jl_inv_theta(theta, u)], [np.zeros((3, 3)), Jl_inv_theta(theta, u)]])
+    Jl_inv = Jl_inv_mat(theta, u)
+    Q = Q_mat(rho, theta, u)
+    return np.block([[Jl_inv, -Jl_inv @ Q @ Jl_inv], [np.zeros((3, 3)), Jl_inv]])
 
 def jacobian_plus_right_1(M, tau):
     return adjoint(group_inverse(Exp(tau)))
@@ -167,19 +175,19 @@ def V(theta, u):
 def Vinv(theta, u):
     return np.linalg.inv(V(theta, u)) if abs(theta) >= tol else np.eye(3)
 
-def Jl_theta(theta, u):
+def Jl_mat(theta, u):
     u_hat = vec_hat(u)
     return np.eye(3) + (1 - np.cos(theta)) / theta * u_hat + (theta - np.sin(theta)) / theta * u_hat @ u_hat if abs(theta) >= tol else np.eye(3)
 
-def Jl_inv_theta(theta, u):
+def Jl_inv_mat(theta, u):
     u_hat = vec_hat(u)
     return np.eye(3) - 0.5 * theta * u_hat + (1. - 0.5 * theta * (1. + np.cos(theta)) / np.sin(theta)) * u_hat @ u_hat if abs(theta) >= tol else np.eye(3)
 
-def Q(rho, theta, u):
+def Q_mat(rho, theta, u):
     rho_hat = vec_hat(rho)
     u_hat = vec_hat(u)
     if abs(theta) >= tol:
-        Q = 0.5 * rho_hat + (theta - np.sin(theta)) / theta**2 * (u_hat @ rho_hat + rho_hat @ u_hat + u_hat @ rho_hat @ u_hat) - \
+        Q = 0.5 * rho_hat + (theta - np.sin(theta)) / theta**2 * (u_hat @ rho_hat + rho_hat @ u_hat + theta * u_hat @ rho_hat @ u_hat) - \
             (1. - 0.5 * theta**2 - np.cos(theta)) / theta**2 * (u_hat @ u_hat @ rho_hat + rho_hat @ u_hat @ u_hat - 3. * u_hat @ rho_hat @ u_hat) - \
             0.5 * ((1. - theta**2 / 2. - np.cos(theta)) / theta - 3. * (theta - np.sin(theta) - theta**3 / 6.) / theta**2) * (u_hat @ rho_hat @ u_hat @ u_hat + u_hat @ u_hat @ rho_hat @ u_hat)
     else:
@@ -187,5 +195,82 @@ def Q(rho, theta, u):
     return Q
 
 
-def testing():
-    pass
+def printing(tau1, tau2, action_vec):
+    M1 = group_element(tau1)
+    M2 = group_element(tau2)
+    tau1_hat = algebra_element(tau1)
+    cartesian1 = decompose_cartesian_element(tau1)
+    print(f"tau1:\n {tau1}")
+    print(f"tau2:\n {tau2}")
+    print(f"action_vec:\n {action_vec}")
+    print(f"M1:\n {M1}")
+    print(f"M2:\n {M2}")
+    print(f"tau1_hat:\n {tau1_hat}")
+    print(f"cartesian1:\n {cartesian1}")
+    print(f"inverse_M1:\n {group_inverse(M1)}")
+    print(f"action_M1:\n {group_action(M1, action_vec)}")
+    print(f"composition_M1_M2:\n {group_composition(M1, M2)}")
+    print(f"right_plus_M1_tau1:\n {plus_right(M1, tau1)}")
+    print(f"left_plus_M1_tau1:\n {plus_left(M1, tau1)}")
+    print(f"right_minus_M1_M2:\n {minus_right(M1, M2)}")
+    print(f"left_minus_M1_M2:\n {minus_left(M1, M2)}")
+    print(f"adjoint_M1:\n {adjoint(M1)}")
+    print(f"jacobian_inverse_M1:\n {jacobian_inverse(M1)}")
+    print(f"jacobian_composition_1_M1_M2:\n {jacobian_composition_1(M1, M2)}")
+    print(f"jacobian_composition_2_M1_M2:\n {jacobian_composition_2(M1, M2)}")
+    print(f"jacobian_right_tau1:\n {jacobian_right(tau1)}")
+    print(f"jacobian_right_inverse_tau1:\n {jacobian_right_inverse(tau1)}")
+    print(f"jacobian_left_tau1:\n {jacobian_left(tau1)}")
+    print(f"jacobian_left_inverse_tau1:\n {jacobian_left_inverse(tau1)}")
+    print(f"jacobian_plus_right_1_M1_tau1:\n {jacobian_plus_right_1(M1, tau1)}")
+    print(f"jacobian_plus_right_2_M1_tau1:\n {jacobian_plus_right_2(M1, tau1)}")
+    print(f"jacobian_minus_right_1_M1_M2:\n {jacobian_minus_right_1(M1, M2)}")
+    print(f"jacobian_minus_right_2_M1_M2:\n {jacobian_minus_right_2(M1, M2)}")
+    print(f"jacobian_rotation_action_1_M1:\n {jacobian_rotation_action_1(M1, action_vec)}")
+    print(f"jacobian_rotation_action_2_M1:\n {jacobian_rotation_action_2(M1, action_vec)}")
+
+def testing(tau1, tau2, action_vec):
+    M1 = group_element(tau1)
+    M2 = group_element(tau2)
+    tau1_hat = algebra_element(tau1)
+    cartesian1_1, cartesian1_2, cartesian1_3 = decompose_cartesian_element(tau1)
+    inverse_M1 = group_inverse(M1)
+    action_M1 = group_action(M1, action_vec)
+    composition_M1_M2 = group_composition(M1, M2)
+    right_plus_M1_tau1 = plus_right(M1, tau1)
+    left_plus_M1_tau1 = plus_left(M1, tau1)
+    right_minus_M1_M2 = minus_right(M1, M2)
+    left_minus_M1_M2 = minus_left(M1, M2)
+    adjoint_M1 = adjoint(M1)
+    jacobian_inverse_M1 = jacobian_inverse(M1)
+    jacobian_composition_1_M1_M2 = jacobian_composition_1(M1, M2)
+    jacobian_composition_2_M1_M2 = jacobian_composition_2(M1, M2)
+    jacobian_right_tau1 = jacobian_right(tau1)
+    jacobian_right_inverse_tau1 = jacobian_right_inverse(tau1)
+    jacobian_left_tau1 = jacobian_left(tau1)
+    jacobian_left_inverse_tau1 = jacobian_left_inverse(tau1)
+    jacobian_plus_right_1_M1_tau1 = jacobian_plus_right_1(M1, tau1)
+    jacobian_plus_right_2_M1_tau1 = jacobian_plus_right_2(M1, tau1)
+    jacobian_minus_right_1_M1_M2 = jacobian_minus_right_1(M1, M2)
+    jacobian_minus_right_2_M1_M2 = jacobian_minus_right_2(M1, M2)
+    jacobian_rotation_action_1_M1 = jacobian_rotation_action_1(M1, action_vec)
+    jacobian_rotation_action_2_M1 = jacobian_rotation_action_2(M1, action_vec)
+    assert np.allclose(M1, exp(tau1_hat), atol = 1e-10)
+    assert np.allclose(M1, Exp(tau1), atol = 1e-10)
+    assert np.allclose(tau1, compose_cartesian_element(cartesian1_1, cartesian1_2, cartesian1_3), atol = 1e-10)
+    assert np.allclose(tau1_hat, hat(tau1), atol = 1e-10)
+    assert np.allclose(tau1, vee(tau1_hat), atol = 1e-10)
+    assert np.allclose(tau1, Log(M1), atol = 1e-10)
+    assert np.allclose(tau1_hat, log(M1), atol = 1e-10)
+    assert np.allclose(right_plus_M1_tau1, left_plus_M1_tau1, atol = 1e-10)
+    print("\nAll tests passed!")
+
+def run_test_example():
+    np.random.seed(0)
+    tau1 = np.random.rand(6,)
+    tau2 = np.random.rand(6,)
+    action_vec = np.random.rand(4,)
+    printing(tau1, tau2, action_vec)
+    testing(tau1, tau2, action_vec)
+
+run_test_example()

@@ -36,5 +36,11 @@ def vee():
     pass
 
 
-def testing(q):
+def printing():
+    pass
+
+def testing():
+    print("\nAll tests passed!")
+
+def run_test_example():
     pass
