@@ -4,7 +4,7 @@ import numpy as np
 '''
 tau = theta * u (angle-axis representation) is the cartesian space element, where theta \in R is the angle in radians and u \in R^3 unit vector along the axis of rotation
 R = I + sin(theta) * u_hat + (1 - cos(theta)) * u_hat^2 is the group element
-v_hat = theta * u_hat is the algebra element, where u_hat = [0, -u3, u2; u3, 0, -u1; -u2, u1, 0]
+tau_hat = theta * u_hat is the algebra element, where u_hat = [0, -u3, u2; u3, 0, -u1; -u2, u1, 0]
 '''
 tol = 1e-5  # tolerance for numerical issues
 
@@ -25,8 +25,8 @@ def group_action(R, x):
 
 def algebra_element(tau):
     theta, u = decompose_cartesian_element(tau)
-    v_hat = theta * vec_hat(u)
-    return v_hat
+    tau_hat = theta * vec_hat(u)
+    return tau_hat
 
 def compose_cartesian_element(theta, u):
     return theta * u
@@ -38,17 +38,17 @@ def decompose_cartesian_element(tau):
 
 def hat(tau):
     theta, u = decompose_cartesian_element(tau)
-    v_hat = theta * vec_hat(u)
-    return v_hat
+    tau_hat = theta * vec_hat(u)
+    return tau_hat
 
-def vee(v_hat):
-    tau = np.block([v_hat[2, 1], v_hat[0, 2], v_hat[1, 0]])
+def vee(tau_hat):
+    tau = np.block([tau_hat[2, 1], tau_hat[0, 2], tau_hat[1, 0]])
     theta = np.linalg.norm(tau)
     u = tau / theta if abs(theta) >= tol else np.array([0., 0., 1.])
     return compose_cartesian_element(theta, u)
 
-def exp(v_hat):
-    tau = np.block([v_hat[2, 1], v_hat[0, 2], v_hat[1, 0]])
+def exp(tau_hat):
+    tau = np.block([tau_hat[2, 1], tau_hat[0, 2], tau_hat[1, 0]])
     theta = np.linalg.norm(tau)
     u = tau / theta if abs(theta) >= tol else np.array([0., 0., 1.])
     u_hat = vec_hat(u)
@@ -57,8 +57,8 @@ def exp(v_hat):
 
 def log(R):
     theta = np.arccos((np.trace(R) - 1.) / 2.)
-    v_hat = theta * (R - R.T) / (2. * np.sin(theta)) if abs(theta) >= tol else (R - R.T) / 2.
-    return v_hat
+    tau_hat = theta * (R - R.T) / (2. * np.sin(theta)) if abs(theta) >= tol else (R - R.T) / 2.
+    return tau_hat
 
 def Exp(tau):
     theta, u = decompose_cartesian_element(tau)
@@ -68,8 +68,8 @@ def Exp(tau):
 
 def Log(R):
     theta = np.arccos((np.trace(R) - 1.) / 2.)
-    v_hat = theta * (R - R.T) / (2. * np.sin(theta)) if abs(theta) >= tol else (R - R.T) / 2.
-    tau = np.block([v_hat[2, 1], v_hat[0, 2], v_hat[1, 0]])
+    tau_hat = theta * (R - R.T) / (2. * np.sin(theta)) if abs(theta) >= tol else (R - R.T) / 2.
+    tau = np.block([tau_hat[2, 1], tau_hat[0, 2], tau_hat[1, 0]])
     u = tau / theta if abs(theta) >= tol else np.array([0., 0., 1.])
     return compose_cartesian_element(theta, u)
 
@@ -210,6 +210,7 @@ def testing(tau1, tau2, action_vec):
     assert np.allclose(tau1, Log(R1), atol = 1e-10)
     assert np.allclose(theta1_hat, log(R1), atol = 1e-10)
     assert np.allclose(right_plus_R1_tau1, left_plus_R1_tau1, atol = 1e-10)
+    assert np.allclose(adjoint(Exp(tau1)), jacobian_left(tau1) @ jacobian_right_inverse(tau1), atol = 1e-10)
     print("\nAll tests passed!")
 
 def run_test_example():

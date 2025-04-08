@@ -149,11 +149,11 @@ def jacobian_minus_right_1(M1, M2):
 def jacobian_minus_right_2(M1, M2):
     return jacobian_right_inverse(minus_right(M1, M2))
 
-def jacobian_rotation_action_1(M, p):
+def jacobian_motion_action_1(M, p):
     R = M[:2, :2]
     return np.block([R, R @ np.array([[0., -1.], [1., 0.]]) @ p[:2].reshape(-1, 1)])
 
-def jacobian_rotation_action_2(M, p):
+def jacobian_motion_action_2(M, p):
     R = M[:2, :2]
     return R
 
@@ -195,8 +195,8 @@ def printing(tau1, tau2, action_vec):
     print(f"jacobian_plus_right_2_M1_tau1:\n {jacobian_plus_right_2(M1, tau1)}")
     print(f"jacobian_minus_right_1_M1_M2:\n {jacobian_minus_right_1(M1, M2)}")
     print(f"jacobian_minus_right_2_M1_M2:\n {jacobian_minus_right_2(M1, M2)}")
-    print(f"jacobian_rotation_action_1_M1:\n {jacobian_rotation_action_1(M1, action_vec)}")
-    print(f"jacobian_rotation_action_2_M1:\n {jacobian_rotation_action_2(M1, action_vec)}")
+    print(f"jacobian_motion_action_1_M1:\n {jacobian_motion_action_1(M1, action_vec)}")
+    print(f"jacobian_motion_action_2_M1:\n {jacobian_motion_action_2(M1, action_vec)}")
 
 def testing(tau1, tau2, action_vec):
     M1 = group_element(tau1)
@@ -222,8 +222,8 @@ def testing(tau1, tau2, action_vec):
     jacobian_plus_right_2_M1_tau1 = jacobian_plus_right_2(M1, tau1)
     jacobian_minus_right_1_M1_M2 = jacobian_minus_right_1(M1, M2)
     jacobian_minus_right_2_M1_M2 = jacobian_minus_right_2(M1, M2)
-    jacobian_rotation_action_1_M1 = jacobian_rotation_action_1(M1, action_vec)
-    jacobian_rotation_action_2_M1 = jacobian_rotation_action_2(M1, action_vec)
+    jacobian_motion_action_1_M1 = jacobian_motion_action_1(M1, action_vec)
+    jacobian_motion_action_2_M1 = jacobian_motion_action_2(M1, action_vec)
     assert np.allclose(M1, exp(tau1_hat), atol = 1e-10)
     assert np.allclose(M1, Exp(tau1), atol = 1e-10)
     assert np.allclose(tau1, compose_cartesian_element(cartesian1_1, cartesian1_2), atol = 1e-10)
@@ -232,6 +232,7 @@ def testing(tau1, tau2, action_vec):
     assert np.allclose(tau1, Log(M1), atol = 1e-10)
     assert np.allclose(tau1_hat, log(M1), atol = 1e-10)
     assert np.allclose(right_plus_M1_tau1, left_plus_M1_tau1, atol = 1e-10)
+    assert np.allclose(adjoint(Exp(tau1)), jacobian_left(tau1) @ jacobian_right_inverse(tau1), atol = 1e-10)
     print("\nAll tests passed!")
 
 def run_test_example():

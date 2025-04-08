@@ -105,6 +105,11 @@ def jacobian_minus_right_1(T1, T2):
 def jacobian_minus_right_2(T1, T2):
     return -np.eye(T1.shape[0] - 1)
 
+def jacobian_translation_action_1(T, p):
+    return np.eye(T.shape[0] - 1)
+
+def jacobian_translation_action_2(T, p):
+    return np.eye(T.shape[0] - 1)
 
 def printing(t1, t2, action_vec):
     T1 = group_element(t1)
@@ -137,6 +142,8 @@ def printing(t1, t2, action_vec):
     print(f"jacobian_plus_right_2_T1_t1:\n {jacobian_plus_right_2(T1, t1)}")
     print(f"jacobian_minus_right_1_T1_T2:\n {jacobian_minus_right_1(T1, T2)}")
     print(f"jacobian_minus_right_2_T1_T2:\n {jacobian_minus_right_2(T1, T2)}")
+    print(f"jacobian_translation_action_1_T1:\n {jacobian_translation_action_1(T1, action_vec)}")
+    print(f"jacobian_translation_action_2_T1:\n {jacobian_translation_action_2(T1, action_vec)}")
 
 def testing(t1, t2, action_vec):
     T1 = group_element(t1)
@@ -162,6 +169,8 @@ def testing(t1, t2, action_vec):
     jacobian_plus_right_2_T1_t1 = jacobian_plus_right_2(T1, t1)
     jacobian_minus_right_1_T1_T2 = jacobian_minus_right_1(T1, T2)
     jacobian_minus_right_2_T1_T2 = jacobian_minus_right_2(T1, T2)
+    jacobian_translation_action_1_T1 = jacobian_translation_action_1(T1, action_vec)
+    jacobian_translation_action_2_T1 = jacobian_translation_action_2(T1, action_vec)
     assert np.allclose(T1, exp(t1_hat), atol = 1e-10)
     assert np.allclose(T1, Exp(t1), atol = 1e-10)
     assert np.allclose(t1, compose_cartesian_element(cartesian1), atol = 1e-10)
@@ -170,6 +179,7 @@ def testing(t1, t2, action_vec):
     assert np.allclose(t1, Log(T1), atol = 1e-10)
     assert np.allclose(t1_hat, log(T1), atol = 1e-10)
     assert np.allclose(right_plus_T1_t1, left_plus_T1_t1, atol = 1e-10)
+    assert np.allclose(adjoint(Exp(t1)), jacobian_left(t1) @ jacobian_right_inverse(t1), atol = 1e-10)
     print("\nAll tests passed!")
 
 def run_test_example():
