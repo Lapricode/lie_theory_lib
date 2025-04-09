@@ -8,7 +8,7 @@ import SE3_rigid_motion as SE3
 import T_translation as T
 
 
-# np.random.seed(0)
+np.random.seed(0)
 
 def S1_rotation_tests(printing = False):
     theta1 = np.random.randn(1)
