@@ -14,6 +14,9 @@ def group_element(tau):
     R = np.eye(3) + np.sin(theta) * u_hat + (1 - np.cos(theta)) * u_hat @ u_hat
     return R
 
+def group_identity():
+    return np.eye(3)
+
 def group_composition(R1, R2):
     return R1 @ R2
 
@@ -140,85 +143,3 @@ def jacobian_rotation_action_2(R, x):
 
 def vec_hat(v):
     return np.block([[0., -v[2], v[1]], [v[2], 0., -v[0]], [-v[1], v[0], 0.]])
-
-
-def printing(tau1, tau2, action_vec):
-    R1 = group_element(tau1)
-    R2 = group_element(tau2)
-    theta1_hat = algebra_element(tau1)
-    cartesian1 = decompose_cartesian_element(tau1)
-    print(f"tau1:\n {tau1}")
-    print(f"tau2:\n {tau2}")
-    print(f"action_vec:\n {action_vec}")
-    print(f"R1:\n {R1}")
-    print(f"R2:\n {R2}")
-    print(f"theta1_hat:\n {theta1_hat}")
-    print(f"cartesian1:\n {cartesian1}")
-    print(f"inverse_R1:\n {group_inverse(R1)}")
-    print(f"action_R1:\n {group_action(R1, action_vec)}")
-    print(f"composition_R1_R2:\n {group_composition(R1, R2)}")
-    print(f"right_plus_R1_tau1:\n {plus_right(R1, tau1)}")
-    print(f"left_plus_R1_tau1:\n {plus_left(R1, tau1)}")
-    print(f"right_minus_R1_R2:\n {minus_right(R1, R2)}")
-    print(f"left_minus_R1_R2:\n {minus_left(R1, R2)}")
-    print(f"adjoint_R1:\n {adjoint(R1)}")
-    print(f"jacobian_inverse_R1:\n {jacobian_inverse(R1)}")
-    print(f"jacobian_composition_1_R1_R2:\n {jacobian_composition_1(R1, R2)}")
-    print(f"jacobian_composition_2_R1_R2:\n {jacobian_composition_2(R1, R2)}")
-    print(f"jacobian_right_tau1:\n {jacobian_right(tau1)}")
-    print(f"jacobian_right_inverse_tau1:\n {jacobian_right_inverse(tau1)}")
-    print(f"jacobian_left_tau1:\n {jacobian_left(tau1)}")
-    print(f"jacobian_left_inverse_tau1:\n {jacobian_left_inverse(tau1)}")
-    print(f"jacobian_plus_right_1_R1_tau1:\n {jacobian_plus_right_1(R1, tau1)}")
-    print(f"jacobian_plus_right_2_R1_tau1:\n {jacobian_plus_right_2(R1, tau1)}")
-    print(f"jacobian_minus_right_1_R1_R2:\n {jacobian_minus_right_1(R1, R2)}")
-    print(f"jacobian_minus_right_2_R1_R2:\n {jacobian_minus_right_2(R1, R2)}")
-    print(f"jacobian_rotation_action_1_R1:\n {jacobian_rotation_action_1(R1, action_vec)}")
-    print(f"jacobian_rotation_action_2_R1:\n {jacobian_rotation_action_2(R1, action_vec)}")
-
-def testing(tau1, tau2, action_vec):
-    R1 = group_element(tau1)
-    R2 = group_element(tau2)
-    theta1_hat = algebra_element(tau1)
-    cartesian1_1, cartesian1_2 = decompose_cartesian_element(tau1)
-    inverse_R1 = group_inverse(R1)
-    action_R1 = group_action(R1, action_vec)
-    composition_R1_R2 = group_composition(R1, R2)
-    right_plus_R1_tau1 = plus_right(R1, tau1)
-    left_plus_R1_tau1 = plus_left(R1, tau1)
-    right_minus_R1_R2 = minus_right(R1, R2)
-    left_minus_R1_R2 = minus_left(R1, R2)
-    adjoint_R1 = adjoint(R1)
-    jacobian_inverse_R1 = jacobian_inverse(R1)
-    jacobian_composition_1_R1_R2 = jacobian_composition_1(R1, R2)
-    jacobian_composition_2_R1_R2 = jacobian_composition_2(R1, R2)
-    jacobian_right_tau1 = jacobian_right(tau1)
-    jacobian_right_inverse_tau1 = jacobian_right_inverse(tau1)
-    jacobian_left_tau1 = jacobian_left(tau1)
-    jacobian_left_inverse_tau1 = jacobian_left_inverse(tau1)
-    jacobian_plus_right_1_R1_tau1 = jacobian_plus_right_1(R1, tau1)
-    jacobian_plus_right_2_R1_tau1 = jacobian_plus_right_2(R1, tau1)
-    jacobian_minus_right_1_R1_R2 = jacobian_minus_right_1(R1, R2)
-    jacobian_minus_right_2_R1_R2 = jacobian_minus_right_2(R1, R2)
-    jacobian_rotation_action_1_R1 = jacobian_rotation_action_1(R1, action_vec)
-    jacobian_rotation_action_2_R1 = jacobian_rotation_action_2(R1, action_vec)
-    assert np.allclose(R1, exp(theta1_hat), atol = 1e-10)
-    assert np.allclose(R1, Exp(tau1), atol = 1e-10)
-    assert np.allclose(tau1, compose_cartesian_element(cartesian1_1, cartesian1_2), atol = 1e-10)
-    assert np.allclose(theta1_hat, hat(tau1), atol = 1e-10)
-    assert np.allclose(tau1, vee(theta1_hat), atol = 1e-5)
-    assert np.allclose(tau1, Log(R1), atol = 1e-10)
-    assert np.allclose(theta1_hat, log(R1), atol = 1e-10)
-    assert np.allclose(right_plus_R1_tau1, left_plus_R1_tau1, atol = 1e-10)
-    assert np.allclose(adjoint(Exp(tau1)), jacobian_left(tau1) @ jacobian_right_inverse(tau1), atol = 1e-10)
-    print("\nAll tests passed!")
-
-def run_test_example():
-    np.random.seed(0)
-    tau1 = np.random.randn(3,)
-    tau2 = np.random.randn(3,)
-    action_vec = np.random.randn(3, 1)
-    printing(tau1, tau2, action_vec)
-    testing(tau1, tau2, action_vec)
-
-run_test_example()
