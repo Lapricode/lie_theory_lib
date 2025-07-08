@@ -1,4 +1,5 @@
 import numpy as np
+import tolerances
 
 
 '''
@@ -6,7 +7,7 @@ theta is the cartesian space element
 z = np.cos(theta) + i * np.sin(theta) is the group element
 tau_hat = i * theta is the algebra element
 '''
-tol = 1e-5  # tolerance for numerical issues
+tol = tolerances.small_case_tol  # tolerance for numerical issues
 
 def group_element(theta):
     z = np.cos(theta) + 1j * np.sin(theta)

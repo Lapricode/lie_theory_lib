@@ -1,4 +1,5 @@
 import numpy as np
+import tolerances
 
 
 '''
@@ -6,7 +7,7 @@ tau = [rho; theta * u] is the cartesian space element, where rho \in R^3 is the 
 M = [R, t; 0, 1] is the group element, where R \in R^{3x3} is the rotation matrix and t \in R^3 is the translation vector
 tau_hat = [theta * u_hat, rho; 0, 1] is the algebra element, where u_hat = [0, -u3, u2; u3, 0, -u1; -u2, u1, 0]
 '''
-tol = 1e-5  # tolerance for numerical issues
+tol = tolerances.small_case_tol  # tolerance for numerical issues
 
 def group_element(tau):
     rho, theta, u = decompose_cartesian_element(tau)
@@ -43,7 +44,9 @@ def decompose_cartesian_element(tau):
     rho = tau[:3]
     v = tau[3:]
     theta = np.linalg.norm(v)
-    u = v / theta if abs(theta) >= tol else np.array([0., 0., 1.])
+    if abs(theta) < tol:
+        return rho, 0., np.array([0., 0., 1.])
+    u = v / theta
     return rho, theta, u
 
 def hat(tau):
@@ -56,14 +59,18 @@ def vee(tau_hat):
     rho = tau_hat[:3, 3]
     v = np.array([tau_hat[2, 1], tau_hat[0, 2], tau_hat[1, 0]])
     theta = np.linalg.norm(v)
-    u = v / theta if abs(theta) >= tol else np.array([0., 0., 1.])
+    if abs(theta) < tol:
+        return compose_cartesian_element(rho, 0., np.array([0., 0., 1.]))
+    u = v / theta
     return compose_cartesian_element(rho, theta, u)
 
 def exp(tau_hat):
     rho = tau_hat[:3, 3]
     v = np.array([tau_hat[2, 1], tau_hat[0, 2], tau_hat[1, 0]])
     theta = np.linalg.norm(v)
-    u = v / theta if abs(theta) >= tol else np.array([0., 0., 1.])
+    if abs(theta) < tol:
+        return np.block([[np.eye(3), rho.reshape(-1, 1)], [np.zeros((1, 3)), 1.]])
+    u = v / theta
     u_hat = vec_hat(u)
     Exp_theta = np.eye(3) + np.sin(theta) * u_hat + (1 - np.cos(theta)) * u_hat @ u_hat
     M = np.block([[Exp_theta, V(theta, u) @ rho.reshape(-1, 1)], [np.zeros((1, 3)), 1.]])
@@ -73,8 +80,10 @@ def log(M):
     R = M[:3, :3]
     t = M[:3, 3]
     theta = np.arccos((np.trace(R) - 1.) / 2.)
-    v_hat = theta * (R - R.T) / (2. * np.sin(theta)) if abs(theta) >= tol else (R - R.T) / 2.
-    u = np.array([v_hat[2, 1], v_hat[0, 2], v_hat[1, 0]]) / theta if abs(theta) >= tol else np.array([0., 0., 1.])
+    if abs(theta) < tol:
+        return np.block([[(R - R.T) / 2., t.reshape(-1, 1)], [np.zeros((1, 4))]])
+    v_hat = theta * (R - R.T) / (2. * np.sin(theta))
+    u = np.array([v_hat[2, 1], v_hat[0, 2], v_hat[1, 0]]) / theta
     rho = Vinv(theta, u) @ t
     tau_hat = np.block([[v_hat, rho.reshape(-1, 1)], [np.zeros((1, 4))]])
     return tau_hat
@@ -90,10 +99,11 @@ def Log(M):
     R = M[:3, :3]
     t = M[:3, 3]
     theta = np.arccos((np.trace(R) - 1.) / 2.)
-    v_hat = theta * (R - R.T) / (2. * np.sin(theta)) if abs(theta) >= tol else (R - R.T) / 2.
-    u = np.array([v_hat[2, 1], v_hat[0, 2], v_hat[1, 0]]) / theta if abs(theta) >= tol else np.array([0., 0., 1.])
+    if abs(theta) < tol:
+        return compose_cartesian_element(t, 0., np.array([0., 0., 1.]))
+    v_hat = theta * (R - R.T) / (2. * np.sin(theta))
+    u = np.array([v_hat[2, 1], v_hat[0, 2], v_hat[1, 0]]) / theta
     rho = Vinv(theta, u) @ t
-    u = np.array([v_hat[2, 1], v_hat[0, 2], v_hat[1, 0]]) / theta if abs(theta) >= tol else np.array([0., 0., 1.])
     return compose_cartesian_element(rho, theta, u)
 
 def plus_right(M, tau):

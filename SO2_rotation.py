@@ -1,4 +1,5 @@
 import numpy as np
+import tolerances
 
 
 '''
@@ -6,7 +7,7 @@ theta is the cartesian space element, where theta is the angle in radians
 R = [cos(theta), -sin(theta); sin(theta), cos(theta)] is the group element
 theta_hat = [0, -theta; theta, 0] is the algebra element
 '''
-tol = 1e-5  # tolerance for numerical issues
+tol = tolerances.small_case_tol  # tolerance for numerical issues
 
 def group_element(theta):
     R = np.block([[np.cos(theta), -np.sin(theta)], [np.sin(theta), np.cos(theta)]])
