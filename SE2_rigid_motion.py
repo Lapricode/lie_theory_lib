@@ -4,7 +4,7 @@ import numpy as np
 '''
 tau = [rho; theta] is the cartesian space element, where rho \in R^2 is the translation vector and theta \in R is the rotation angle in radians
 M = [R, t; 0, 1] is the group element, where R \in R^{2x2} is the rotation matrix and t \in R^2 is the translation vector
-tau_hat = [theta_hat, rho; 0, 1] is the algebra element, where theta_hat = [0, -theta; theta, 0]
+tau_hat = [theta_hat, rho; 0, 0] is the algebra element, where theta_hat = [0, -theta; theta, 0]
 '''
 tol = 1e-5  # tolerance for numerical issues
 
