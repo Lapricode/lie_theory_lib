@@ -1,3 +1,5 @@
+import argparse
+import traceback
 import numpy as np
 import S1_rotation as S1
 import S3_rotation as S3
@@ -8,10 +10,6 @@ import SE3_rigid_motion as SE3
 import T_translation as T
 import tolerances
 
-
-np.random.seed(0)
-small_case_tol = tolerances.small_case_tol
-error_tol = tolerances.error_tol
 
 def S1_rotation_tests(printing = False, try_edge_case = False):
     if not try_edge_case:
@@ -60,7 +58,7 @@ def S1_rotation_tests(printing = False, try_edge_case = False):
         print(f"jacobian_rotation_action_2_z1:\n {S1.jacobian_rotation_action_2(z1, action_vec)}")
 
     # testing
-    print("\n- S1 rotation group testings ...\n")
+    if printing: print("\n- S1 rotation group testings ...\n")
     z1 = S1.group_element(theta1)
     z2 = S1.group_element(theta2)
     theta1_hat = S1.algebra_element(theta1)
@@ -100,7 +98,7 @@ def S1_rotation_tests(printing = False, try_edge_case = False):
     assert np.allclose(S1.adjoint(S1.Exp(theta1)), S1.jacobian_left(theta1) @ S1.jacobian_right_inverse(theta1), atol = error_tol)
     assert np.allclose(S1.adjoint(S1.group_composition(z1, z2)), S1.adjoint(z1) @ S1.adjoint(z2), atol = error_tol)
     assert np.allclose(right_plus_z1_theta1, S1.plus_left(z1, adjoint_z1 @ theta1), atol = error_tol)
-    print("All tests passed for S1 rotation group!")
+    if printing: print("\nAll tests passed for S1 rotation group!")
 
 def S3_rotation_tests(printing = False, try_edge_case = False):
     if not try_edge_case:
@@ -149,7 +147,7 @@ def S3_rotation_tests(printing = False, try_edge_case = False):
         print(f"jacobian_rotation_action_2_q1:\n {S3.jacobian_rotation_action_2(q1, action_vec)}")
 
     # testing
-    print("\n- S3 rotation group testings ...\n")
+    if printing: print("\n- S3 rotation group testings ...\n")
     q1 = S3.group_element(tau1)
     q2 = S3.group_element(tau2)
     tau1_hat = S3.algebra_element(tau1)
@@ -182,14 +180,14 @@ def S3_rotation_tests(printing = False, try_edge_case = False):
     assert np.allclose(q1, S3.Exp(tau1), atol = error_tol)
     assert np.allclose(tau1, S3.compose_cartesian_element(cartesian1_theta, cartesian1_u), atol = error_tol)
     assert np.allclose(tau1_hat, S3.hat(tau1), atol = error_tol)
-    assert np.allclose(tau1, S3.vee(tau1_hat), atol=error_tol)
+    assert np.allclose(tau1, S3.vee(tau1_hat), atol = error_tol)
     assert np.allclose(tau1, S3.Log(q1), atol = error_tol)
     assert np.allclose(tau1_hat, S3.log(q1), atol = error_tol)
     assert np.allclose(right_plus_q1_tau1, left_plus_q1_tau1, atol = error_tol)
     assert np.allclose(S3.adjoint(S3.Exp(tau1)), S3.jacobian_left(tau1) @ S3.jacobian_right_inverse(tau1), atol = error_tol)
     assert np.allclose(S3.adjoint(S3.group_composition(q1, q2)), S3.adjoint(q1) @ S3.adjoint(q2), atol = error_tol)
     assert np.allclose(right_plus_q1_tau1, S3.plus_left(q1, adjoint_q1 @ tau1), atol = error_tol)
-    print("All tests passed for S3 rotation group!")
+    if printing: print("\nAll tests passed for S3 rotation group!")
 
 def SO2_rotation_tests(printing = False, try_edge_case = False):
     if not try_edge_case:
@@ -238,7 +236,7 @@ def SO2_rotation_tests(printing = False, try_edge_case = False):
         print(f"jacobian_rotation_action_2_R1:\n {SO2.jacobian_rotation_action_2(R1, action_vec)}")
 
     # testing
-    print("\n- SO2 rotation group testings:")
+    if printing: print("\n- SO2 rotation group testings:")
     R1 = SO2.group_element(theta1)
     R2 = SO2.group_element(theta2)
     theta1_hat = SO2.algebra_element(theta1)
@@ -278,7 +276,7 @@ def SO2_rotation_tests(printing = False, try_edge_case = False):
     assert np.allclose(SO2.adjoint(SO2.Exp(theta1)), SO2.jacobian_left(theta1) @ SO2.jacobian_right_inverse(theta1), atol = error_tol)
     assert np.allclose(SO2.adjoint(SO2.group_composition(R1, R2)), SO2.adjoint(R1) @ SO2.adjoint(R2), atol = error_tol)
     assert np.allclose(right_plus_R1_theta1, SO2.plus_left(R1, adjoint_R1 @ theta1), atol = error_tol)
-    print("\nAll tests passed for SO2 rotation group!")
+    if printing: print("\nAll tests passed for SO2 rotation group!")
 
 def SO3_rotation_tests(printing = False, try_edge_case = False):
     if not try_edge_case:
@@ -327,7 +325,7 @@ def SO3_rotation_tests(printing = False, try_edge_case = False):
         print(f"jacobian_rotation_action_2_R1:\n {SO3.jacobian_rotation_action_2(R1, action_vec)}")
 
     # testing
-    print("\n- SO3 rotation group testings:")
+    if printing: print("\n- SO3 rotation group testings:")
     R1 = SO3.group_element(tau1)
     R2 = SO3.group_element(tau2)
     theta1_hat = SO3.algebra_element(tau1)
@@ -367,7 +365,7 @@ def SO3_rotation_tests(printing = False, try_edge_case = False):
     assert np.allclose(SO3.adjoint(SO3.Exp(tau1)), SO3.jacobian_left(tau1) @ SO3.jacobian_right_inverse(tau1), atol = error_tol)
     assert np.allclose(SO3.adjoint(SO3.group_composition(R1, R2)), SO3.adjoint(R1) @ SO3.adjoint(R2), atol = error_tol)
     assert np.allclose(right_plus_R1_tau1, SO3.plus_left(R1, adjoint_R1 @ tau1), atol = error_tol)
-    print("\nAll tests passed for SO3 rotation group!")
+    if printing: print("\nAll tests passed for SO3 rotation group!")
 
 def SE2_rigid_motion_tests(printing = False, try_edge_case = False):
     if not try_edge_case:
@@ -416,7 +414,7 @@ def SE2_rigid_motion_tests(printing = False, try_edge_case = False):
         print(f"jacobian_motion_action_2_M1:\n {SE2.jacobian_motion_action_2(M1, action_vec)}")
 
     # testing
-    print("\n- SE2 rigid motion group testings:")
+    if printing: print("\n- SE2 rigid motion group testings:")
     M1 = SE2.group_element(tau1)
     M2 = SE2.group_element(tau2)
     tau1_hat = SE2.algebra_element(tau1)
@@ -456,7 +454,7 @@ def SE2_rigid_motion_tests(printing = False, try_edge_case = False):
     assert np.allclose(SE2.adjoint(SE2.Exp(tau1)), SE2.jacobian_left(tau1) @ SE2.jacobian_right_inverse(tau1), atol = error_tol)
     assert np.allclose(SE2.adjoint(SE2.group_composition(M1, M2)), SE2.adjoint(M1) @ SE2.adjoint(M2), atol = error_tol)
     assert np.allclose(right_plus_M1_tau1, SE2.plus_left(M1, adjoint_M1 @ tau1), atol = error_tol)
-    print("\nAll tests passed for SE2 rigid motion group!")
+    if printing: print("\nAll tests passed for SE2 rigid motion group!")
 
 def SE3_rigid_motion_tests(printing = False, try_edge_case = False):
     if not try_edge_case:
@@ -505,7 +503,7 @@ def SE3_rigid_motion_tests(printing = False, try_edge_case = False):
         print(f"jacobian_motion_action_2_M1:\n {SE3.jacobian_motion_action_2(M1, action_vec)}")
 
     # testing
-    print("\n- SE3 rigid motion group testings:")
+    if printing: print("\n- SE3 rigid motion group testings:")
     M1 = SE3.group_element(tau1)
     M2 = SE3.group_element(tau2)
     tau1_hat = SE3.algebra_element(tau1)
@@ -545,7 +543,7 @@ def SE3_rigid_motion_tests(printing = False, try_edge_case = False):
     assert np.allclose(SE3.adjoint(SE3.Exp(tau1)), SE3.jacobian_left(tau1) @ SE3.jacobian_right_inverse(tau1), atol = error_tol)
     assert np.allclose(SE3.adjoint(SE3.group_composition(M1, M2)), SE3.adjoint(M1) @ SE3.adjoint(M2), atol = error_tol)
     assert np.allclose(right_plus_M1_tau1, SE3.plus_left(M1, adjoint_M1 @ tau1), atol = error_tol)
-    print("\nAll tests passed for SE3 rigid motion group!")
+    if printing: print("\nAll tests passed for SE3 rigid motion group!")
 
 def T_translation_tests(printing = False, try_edge_case = False):
     n = 3
@@ -595,7 +593,7 @@ def T_translation_tests(printing = False, try_edge_case = False):
         print(f"jacobian_translation_action_2_T1:\n {T.jacobian_translation_action_2(T1, action_vec)}")
 
     # testing
-    print("\n- T translation group testings:")
+    if printing: print("\n- T translation group testings:")
     T1 = T.group_element(t1)
     T2 = T.group_element(t2)
     t1_hat = T.algebra_element(t1)
@@ -635,17 +633,45 @@ def T_translation_tests(printing = False, try_edge_case = False):
     assert np.allclose(T.adjoint(T.Exp(t1)), T.jacobian_left(t1) @ T.jacobian_right_inverse(t1), atol = error_tol)
     assert np.allclose(T.adjoint(T.group_composition(T1, T2)), T.adjoint(T1) @ T.adjoint(T2), atol = error_tol)
     assert np.allclose(right_plus_T1_t1, T.plus_left(T1, adjoint_T1 @ t1), atol = error_tol)
-    print("\nAll tests passed for T translation group!")
+    if printing: print("\nAll tests passed for T translation group!")
 
 
 if __name__ == "__main__":
-    print_test_results = False
-    try_edge_case = True
-    S1_rotation_tests(printing = print_test_results, try_edge_case = try_edge_case)
-    S3_rotation_tests(printing = print_test_results, try_edge_case = try_edge_case)
-    SO2_rotation_tests(printing = print_test_results, try_edge_case = try_edge_case)
-    SO3_rotation_tests(printing = print_test_results, try_edge_case = try_edge_case)
-    SE2_rigid_motion_tests(printing = print_test_results, try_edge_case = try_edge_case)
-    SE3_rigid_motion_tests(printing = print_test_results, try_edge_case = try_edge_case)
-    T_translation_tests(printing = print_test_results, try_edge_case = try_edge_case)
-    print("\n\nAll tests passed for all groups tested!")
+    parser = argparse.ArgumentParser(description = "Run Lie Algebra Groups (rotations, translations and rigid motions) tests.")
+    parser.add_argument(
+        "-p", "--print",
+        action = "store_true",
+        help = "Print detailed test results."
+    )
+    parser.add_argument(
+        "-e", "--edge",
+        action = "store_true",
+        help = "Try edge-case tests."
+    )
+
+    # np.random.seed(0)
+    small_case_tol = tolerances.small_case_tol
+    error_tol = tolerances.error_tol
+
+    args = parser.parse_args()
+    print_test_results = args.print
+    try_edge_case = args.edge
+
+    success_counter = 0
+    tries = 1000
+    for k in range(tries):
+        try:
+            S1_rotation_tests(printing = print_test_results, try_edge_case = try_edge_case)
+            S3_rotation_tests(printing = print_test_results, try_edge_case = try_edge_case)
+            SO2_rotation_tests(printing = print_test_results, try_edge_case = try_edge_case)
+            SO3_rotation_tests(printing = print_test_results, try_edge_case = try_edge_case)
+            SE2_rigid_motion_tests(printing = print_test_results, try_edge_case = try_edge_case)
+            SE3_rigid_motion_tests(printing = print_test_results, try_edge_case = try_edge_case)
+            T_translation_tests(printing = print_test_results, try_edge_case = try_edge_case)
+            # print(f"\nTry {k + 1}: ALL tests passed for all groups tested!")
+            success_counter += 1
+        except AssertionError as e:
+            # print(f"\nTry {k + 1}: NOT All tests passed for all groups tested!")
+            # traceback.print_exc()
+            pass
+    print(f"\nSuccess rate = {success_counter / tries * 100.0} %")

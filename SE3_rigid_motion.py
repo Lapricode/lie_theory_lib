@@ -87,7 +87,30 @@ def log(M):
     rho = Vinv(theta, u) @ t
     tau_hat = np.block([[v_hat, rho.reshape(-1, 1)], [np.zeros((1, 4))]])
     return tau_hat
-
+    # R = M[:3, :3]
+    # t = M[:3, 3]
+    # theta = np.arccos(np.clip((np.trace(R) - 1.) / 2., -1.0, 1.0))
+    # if np.isclose(theta, 0., rtol = tol, atol = tol):
+    #     return np.block([[(R - R.T) / 2., t.reshape(-1, 1)], [np.zeros((1, 4))]])
+    # elif np.isclose(theta, np.pi, rtol = tol, atol = tol):
+    #     r00, r01, r02 = R[0, 0], R[0, 1], R[0, 2]
+    #     r10, r11, r12 = R[1, 0], R[1, 1], R[1, 2]
+    #     r20, r21, r22 = R[2, 0], R[2, 1], R[2, 2]
+    #     if not np.isclose(r22, -1., rtol = tol, atol = tol):
+    #         multiplier = theta / np.sqrt(2. * (1. + r22))
+    #         return multiplier * np.array([r02, r12, 1. + r22])
+    #     elif not np.isclose(r11, -1., rtol = tol, atol = tol):
+    #         multiplier = theta / np.sqrt(2. * (1. + r11))
+    #         return multiplier * np.array([r01, 1. + r11, r21])
+    #     elif not np.isclose(r00, -1., rtol = tol, atol = tol):
+    #         multiplier = theta / np.sqrt(2. * (1. + r00))
+    #         return multiplier * np.array([1. + r00, r10, r20])
+    # v_hat = theta * (R - R.T) / (2. * np.sin(theta))
+    # u = np.array([v_hat[2, 1], v_hat[0, 2], v_hat[1, 0]]) / theta
+    # rho = Vinv(theta, u) @ t
+    # tau_hat = np.block([[v_hat, rho.reshape(-1, 1)], [np.zeros((1, 4))]])
+    # return tau_hat
+    
 def Exp(tau):
     rho, theta, u = decompose_cartesian_element(tau)
     u_hat = vec_hat(u)
@@ -105,6 +128,28 @@ def Log(M):
     u = np.array([v_hat[2, 1], v_hat[0, 2], v_hat[1, 0]]) / theta
     rho = Vinv(theta, u) @ t
     return compose_cartesian_element(rho, theta, u)
+    # R = M[:3, :3]
+    # t = M[:3, 3]
+    # theta = np.arccos(np.clip((np.trace(R) - 1.) / 2., -1.0, 1.0))
+    # if np.isclose(theta, 0., rtol = tol, atol = tol):
+    #     return compose_cartesian_element(t, theta, np.array([0., 0., 1.]))
+    # elif np.isclose(theta, np.pi, rtol = tol, atol = tol):
+    #     r00, r01, r02 = R[0, 0], R[0, 1], R[0, 2]
+    #     r10, r11, r12 = R[1, 0], R[1, 1], R[1, 2]
+    #     r20, r21, r22 = R[2, 0], R[2, 1], R[2, 2]
+    #     if not np.isclose(r22, -1., rtol = tol, atol = tol):
+    #         multiplier = theta / np.sqrt(2. * (1. + r22))
+    #         return multiplier * np.array([r02, r12, 1. + r22])
+    #     elif not np.isclose(r11, -1., rtol = tol, atol = tol):
+    #         multiplier = theta / np.sqrt(2. * (1. + r11))
+    #         return multiplier * np.array([r01, 1. + r11, r21])
+    #     elif not np.isclose(r00, -1., rtol = tol, atol = tol):
+    #         multiplier = theta / np.sqrt(2. * (1. + r00))
+    #         return multiplier * np.array([1. + r00, r10, r20])
+    # tau_hat = theta * (R - R.T) / (2. * np.sin(theta))
+    # u = np.block([tau_hat[2, 1], tau_hat[0, 2], tau_hat[1, 0]]) / theta
+    # rho = Vinv(theta, u) @ t
+    # return compose_cartesian_element(rho, theta, u)
 
 def plus_right(M, tau):
     return M @ Exp(tau)

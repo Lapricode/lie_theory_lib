@@ -66,29 +66,29 @@ def exp(tau_hat):
     return R
 
 def log(R):
-    # theta = np.arccos((np.trace(R) - 1.) / 2.)
-    # if abs(theta) < tol:
-    #     return (R - R.T) / 2.
-    # tau_hat = theta * (R - R.T) / (2. * np.sin(theta))
-    # return tau_hat
-    theta = np.arccos(np.clip((np.trace(R) - 1.) / 2., -1.0, 1.0))
-    if np.isclose(theta, 0., rtol = tol, atol = tol):
-        return np.zeros(3,)
-    elif np.isclose(theta, np.pi, rtol = tol, atol = tol):
-        r00, r01, r02 = R[0, 0], R[0, 1], R[0, 2]
-        r10, r11, r12 = R[1, 0], R[1, 1], R[1, 2]
-        r20, r21, r22 = R[2, 0], R[2, 1], R[2, 2]
-        if not np.isclose(r22, -1., rtol = tol, atol = tol):
-            multiplier = theta / np.sqrt(2. * (1. + r22))
-            return multiplier * np.array([r02, r12, 1. + r22])
-        elif not np.isclose(r11, -1., rtol = tol, atol = tol):
-            multiplier = theta / np.sqrt(2. * (1. + r11))
-            return multiplier * np.array([r01, 1. + r11, r21])
-        elif not np.isclose(r00, -1., rtol = tol, atol = tol):
-            multiplier = theta / np.sqrt(2. * (1. + r00))
-            return multiplier * np.array([1. + r00, r10, r20])
+    theta = np.arccos((np.trace(R) - 1.) / 2.)
+    if abs(theta) < tol:
+        return (R - R.T) / 2.
     tau_hat = theta * (R - R.T) / (2. * np.sin(theta))
     return tau_hat
+    # theta = np.arccos(np.clip((np.trace(R) - 1.) / 2., -1.0, 1.0))
+    # if np.isclose(theta, 0., rtol = tol, atol = tol):
+    #     return (R - R.T) / 2.
+    # elif np.isclose(theta, np.pi, rtol = tol, atol = tol):
+    #     r00, r01, r02 = R[0, 0], R[0, 1], R[0, 2]
+    #     r10, r11, r12 = R[1, 0], R[1, 1], R[1, 2]
+    #     r20, r21, r22 = R[2, 0], R[2, 1], R[2, 2]
+    #     if not np.isclose(r22, -1., rtol = tol, atol = tol):
+    #         multiplier = theta / np.sqrt(2. * (1. + r22))
+    #         return multiplier * np.array([r02, r12, 1. + r22])
+    #     elif not np.isclose(r11, -1., rtol = tol, atol = tol):
+    #         multiplier = theta / np.sqrt(2. * (1. + r11))
+    #         return multiplier * np.array([r01, 1. + r11, r21])
+    #     elif not np.isclose(r00, -1., rtol = tol, atol = tol):
+    #         multiplier = theta / np.sqrt(2. * (1. + r00))
+    #         return multiplier * np.array([1. + r00, r10, r20])
+    # tau_hat = theta * (R - R.T) / (2. * np.sin(theta))
+    # return tau_hat
 
 def Exp(tau):
     theta, u = decompose_cartesian_element(tau)
@@ -97,33 +97,31 @@ def Exp(tau):
     return R
 
 def Log(R):
-    # theta = np.arccos((np.trace(R) - 1.) / 2.)
-    # if abs(theta) < tol:
-    #     return np.zeros((3, 1))
-    # tau_hat = theta * (R - R.T) / (2. * np.sin(theta))
-    # tau = np.block([tau_hat[2, 1], tau_hat[0, 2], tau_hat[1, 0]])
-    # u = tau / theta
-    # return compose_cartesian_element(theta, u)
-    theta = np.arccos(np.clip((np.trace(R) - 1.) / 2., -1.0, 1.0))
-    if np.isclose(theta, 0., rtol = tol, atol = tol):
-        return np.zeros(3,)
-    elif np.isclose(theta, np.pi, rtol = tol, atol = tol):
-        r00, r01, r02 = R[0, 0], R[0, 1], R[0, 2]
-        r10, r11, r12 = R[1, 0], R[1, 1], R[1, 2]
-        r20, r21, r22 = R[2, 0], R[2, 1], R[2, 2]
-        if not np.isclose(r22, -1., rtol = tol, atol = tol):
-            multiplier = theta / np.sqrt(2. * (1. + r22))
-            return multiplier * np.array([r02, r12, 1. + r22])
-        elif not np.isclose(r11, -1., rtol = tol, atol = tol):
-            multiplier = theta / np.sqrt(2. * (1. + r11))
-            return multiplier * np.array([r01, 1. + r11, r21])
-        elif not np.isclose(r00, -1., rtol = tol, atol = tol):
-            multiplier = theta / np.sqrt(2. * (1. + r00))
-            return multiplier * np.array([1. + r00, r10, r20])
+    theta = np.arccos((np.trace(R) - 1.) / 2.)
+    if abs(theta) < tol:
+        return compose_cartesian_element(theta, np.array([0., 0., 1.]))
     tau_hat = theta * (R - R.T) / (2. * np.sin(theta))
-    tau = np.block([tau_hat[2, 1], tau_hat[0, 2], tau_hat[1, 0]])
-    u = tau / theta
+    u = np.block([tau_hat[2, 1], tau_hat[0, 2], tau_hat[1, 0]]) / theta
     return compose_cartesian_element(theta, u)
+    # theta = np.arccos(np.clip((np.trace(R) - 1.) / 2., -1.0, 1.0))
+    # if np.isclose(theta, 0., rtol = tol, atol = tol):
+    #     return np.zeros(3,)
+    # elif np.isclose(theta, np.pi, rtol = tol, atol = tol):
+    #     r00, r01, r02 = R[0, 0], R[0, 1], R[0, 2]
+    #     r10, r11, r12 = R[1, 0], R[1, 1], R[1, 2]
+    #     r20, r21, r22 = R[2, 0], R[2, 1], R[2, 2]
+    #     if not np.isclose(r22, -1., rtol = tol, atol = tol):
+    #         multiplier = theta / np.sqrt(2. * (1. + r22))
+    #         return multiplier * np.array([r02, r12, 1. + r22])
+    #     elif not np.isclose(r11, -1., rtol = tol, atol = tol):
+    #         multiplier = theta / np.sqrt(2. * (1. + r11))
+    #         return multiplier * np.array([r01, 1. + r11, r21])
+    #     elif not np.isclose(r00, -1., rtol = tol, atol = tol):
+    #         multiplier = theta / np.sqrt(2. * (1. + r00))
+    #         return multiplier * np.array([1. + r00, r10, r20])
+    # tau_hat = theta * (R - R.T) / (2. * np.sin(theta))
+    # u = np.block([tau_hat[2, 1], tau_hat[0, 2], tau_hat[1, 0]]) / theta
+    # return compose_cartesian_element(theta, u)
 
 def plus_right(R, tau):
     return R @ Exp(tau)
