@@ -1,4 +1,5 @@
 import numpy as np
+import tolerances
 
 
 '''
@@ -6,7 +7,7 @@ tau = [rho; theta] is the cartesian space element, where rho \in R^2 is the tran
 M = [R, t; 0, 1] is the group element, where R \in R^{2x2} is the rotation matrix and t \in R^2 is the translation vector
 tau_hat = [theta_hat, rho; 0, 0] is the algebra element, where theta_hat = [0, -theta; theta, 0]
 '''
-tol = 1e-5  # tolerance for numerical issues
+tol = tolerances.small_case_tol  # tolerance for numerical issues
 
 def group_element(tau):
     rho, theta = decompose_cartesian_element(tau)

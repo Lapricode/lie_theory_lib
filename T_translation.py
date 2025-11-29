@@ -1,4 +1,5 @@
 import numpy as np
+import tolerances
 
 
 '''
@@ -6,7 +7,7 @@ t is the cartesian space element, where t \in R^n is the translation vector
 T = [I, t; 0, 1] is the group element, where t \in R^n is the translation vector
 t_hat = [0, t; 0, 0] is the algebra element, where t \in R^n is the translation vector
 '''
-tol = 1e-5  # tolerance for numerical issues
+tol = tolerances.small_case_tol  # tolerance for numerical issues
 
 def group_element(t):
     T = np.block([[np.eye(np.size(t)), t.reshape(-1, 1)], [np.zeros((1, np.size(t))), 1.]])

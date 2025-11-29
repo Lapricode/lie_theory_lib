@@ -1,4 +1,5 @@
 import numpy as np
+import tolerances
 
 
 '''
@@ -6,7 +7,7 @@ tau = theta * u (angle-axis representation) is the cartesian space element, wher
 q = [cos(theta/2); sin(theta/2) * u] is the group element, where u \in R^3 is the unit vector along the axis of rotation (pure quaternion)
 tau_hat = theta * u_hat is the algebra element, where u_hat = [0, -u3, u2; u3, 0, -u1; -u2, u1, 0]
 '''
-tol = 1e-5  # tolerance for numerical issues
+tol = tolerances.small_case_tol  # tolerance for numerical issues
 
 def group_element(tau):
     theta, u = decompose_cartesian_element(tau)
@@ -41,7 +42,9 @@ def compose_cartesian_element(theta, u):
 
 def decompose_cartesian_element(tau):
     theta = np.linalg.norm(tau)
-    u = tau / theta if abs(theta) >= tol else np.array([0., 0., 1.])
+    if abs(theta) < tol:
+        return 0., np.array([0., 0., 1.])
+    u = tau / theta
     return theta, u
 
 def hat(tau):
@@ -55,7 +58,9 @@ def vee(tau_hat):
 def exp(tau_hat):
     tau = 2. * tau_hat
     theta = np.linalg.norm(tau)
-    u = tau / theta if abs(theta) >= tol else np.array([0., 0., 1.])
+    if abs(theta) < tol:
+        return np.array([1., 0., 0., 0.])
+    u = tau / theta
     q = np.array([np.cos(theta / 2), np.sin(theta / 2) * u[0], np.sin(theta / 2) * u[1], np.sin(theta / 2) * u[2]])
     return q
 
@@ -71,7 +76,9 @@ def log(q):
 
 def Exp(tau):
     theta = np.linalg.norm(tau)
-    u = tau / theta if abs(theta) >= tol else np.array([0., 0., 1.])
+    if abs(theta) < tol:
+        return np.array([1., 0., 0., 0.])
+    u = tau / theta
     q = np.array([np.cos(theta / 2), np.sin(theta / 2) * u[0], np.sin(theta / 2) * u[1], np.sin(theta / 2) * u[2]])
     return q
 
