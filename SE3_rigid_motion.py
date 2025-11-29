@@ -79,7 +79,7 @@ def exp(tau_hat):
 def log(M):
     R = M[:3, :3]
     t = M[:3, 3]
-    theta = np.arccos((np.trace(R) - 1.) / 2.)
+    theta = np.arccos(np.clip((np.trace(R) - 1.) / 2., -1.0, 1.0))
     if abs(theta) < tol:
         return np.block([[(R - R.T) / 2., t.reshape(-1, 1)], [np.zeros((1, 4))]])
     v_hat = theta * (R - R.T) / (2. * np.sin(theta))
@@ -98,7 +98,7 @@ def Exp(tau):
 def Log(M):
     R = M[:3, :3]
     t = M[:3, 3]
-    theta = np.arccos((np.trace(R) - 1.) / 2.)
+    theta = np.arccos(np.clip((np.trace(R) - 1.) / 2., -1.0, 1.0))
     if abs(theta) < tol:
         return compose_cartesian_element(t, 0., np.array([0., 0., 1.]))
     v_hat = theta * (R - R.T) / (2. * np.sin(theta))

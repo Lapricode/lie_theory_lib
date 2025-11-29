@@ -71,7 +71,7 @@ def log(R):
     #     return (R - R.T) / 2.
     # tau_hat = theta * (R - R.T) / (2. * np.sin(theta))
     # return tau_hat
-    theta = np.arccos(max(-1., min(1., (np.trace(R) - 1.) / 2.)))
+    theta = np.arccos(np.clip((np.trace(R) - 1.) / 2., -1.0, 1.0))
     if np.isclose(theta, 0., rtol = tol, atol = tol):
         return np.zeros(3,)
     elif np.isclose(theta, np.pi, rtol = tol, atol = tol):
@@ -104,7 +104,7 @@ def Log(R):
     # tau = np.block([tau_hat[2, 1], tau_hat[0, 2], tau_hat[1, 0]])
     # u = tau / theta
     # return compose_cartesian_element(theta, u)
-    theta = np.arccos(max(-1., min(1., (np.trace(R) - 1.) / 2.)))
+    theta = np.arccos(np.clip((np.trace(R) - 1.) / 2., -1.0, 1.0))
     if np.isclose(theta, 0., rtol = tol, atol = tol):
         return np.zeros(3,)
     elif np.isclose(theta, np.pi, rtol = tol, atol = tol):
