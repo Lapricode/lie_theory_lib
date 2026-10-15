@@ -1,677 +1,196 @@
-import argparse
-import traceback
+"""Strict test-suite for the Lie theory library.
+
+Everything is checked against *independent* ground truth (scipy's expm / matrix inverse and
+central finite differences of the group operations), not against the library itself.
+Run with:  python tests.py        (or: pytest tests.py)
+Requires: numpy, scipy
+"""
+import sys
 import numpy as np
+from scipy.linalg import expm
+from scipy.spatial.transform import Rotation
+
 import S1_rotation as S1
-import S3_rotation as S3
 import SO2_rotation as SO2
+import S3_rotation as S3
 import SO3_rotation as SO3
 import SE2_rigid_motion as SE2
 import SE3_rigid_motion as SE3
 import T_translation as T
-import tolerances
+
+ATOL = 1e-7          # comparison tolerance
+H = 1e-5             # finite-difference step
+REGIMES = ("normal", "small", "tiny", "near_pi")
 
 
-def S1_rotation_tests(printing = False, try_edge_case = False):
-    if not try_edge_case:
-        theta1 = np.random.randn(1)
-        theta2 = np.random.randn(1)
-        action_vec = np.random.randn(1) + 1j * np.random.randn(1)
-    else:
-        theta1 = np.random.randn(1) * small_case_tol
-        theta2 = np.random.randn(1) * small_case_tol
-        action_vec = (np.random.randn(1) + 1j * np.random.randn(1)) * small_case_tol
+def vh(v):
+    return np.array([[0, -v[2], v[1]], [v[2], 0, -v[0]], [-v[1], v[0], 0.]])
 
-    # printing
-    if printing:
-        print("\n- S1 rotation group printings:\n")
-        z1 = S1.group_element(theta1)
-        z2 = S1.group_element(theta2)
-        theta1_hat = S1.algebra_element(theta1)
-        cartesian1 = S1.decompose_cartesian_element(theta1)
-        print(f"theta1:\n {theta1}")
-        print(f"theta2:\n {theta2}")
-        print(f"action_vec:\n {action_vec}")
-        print(f"z1:\n {z1}")
-        print(f"z2:\n {z2}")
-        print(f"theta1_hat:\n {theta1_hat}")
-        print(f"cartesian1:\n {cartesian1}")
-        print(f"inverse_z1:\n {S1.group_inverse(z1)}")
-        print(f"action_z1:\n {S1.group_action(z1, action_vec)}")
-        print(f"composition_z1_z2:\n {S1.group_composition(z1, z2)}")
-        print(f"theta1_right_plus_z1_theta1:\n {S1.plus_right(z1, theta1)}")
-        print(f"theta1_left_plus_z1_theta1:\n {S1.plus_left(z1, theta1)}")
-        print(f"right_minus_z1_z2:\n {S1.minus_right(z1, z2)}")
-        print(f"left_minus_z1_z2:\n {S1.minus_left(z1, z2)}")
-        print(f"adjoint_z1:\n {S1.adjoint(z1)}")
-        print(f"jacobian_inverse_z1:\n {S1.jacobian_inverse(z1)}")
-        print(f"jacobian_composition_1_z1_z2:\n {S1.jacobian_composition_1(z1, z2)}")
-        print(f"jacobian_composition_2_z1_z2:\n {S1.jacobian_composition_2(z1, z2)}")
-        print(f"jacobian_right_theta1:\n {S1.jacobian_right(theta1)}")
-        print(f"jacobian_right_inverse_theta1:\n {S1.jacobian_right_inverse(theta1)}")
-        print(f"jacobian_left_theta1:\n {S1.jacobian_left(theta1)}")
-        print(f"jacobian_left_inverse_theta1:\n {S1.jacobian_left_inverse(theta1)}")
-        print(f"jacobian_plus_right_1_z1_theta1:\n {S1.jacobian_plus_right_1(z1, theta1)}")
-        print(f"jacobian_plus_right_2_z1_theta1:\n {S1.jacobian_plus_right_2(z1, theta1)}")
-        print(f"jacobian_minus_right_1_z1_z2:\n {S1.jacobian_minus_right_1(z1, z2)}")
-        print(f"jacobian_minus_right_2_z1_z2:\n {S1.jacobian_minus_right_2(z1, z2)}")
-        print(f"jacobian_rotation_action_1_z1:\n {S1.jacobian_rotation_action_1(z1, action_vec)}")
-        print(f"jacobian_rotation_action_2_z1:\n {S1.jacobian_rotation_action_2(z1, action_vec)}")
+def vv(W):
+    return np.array([W[2, 1], W[0, 2], W[1, 0]])
 
-    # testing
-    if printing: print("\n- S1 rotation group testings ...\n")
-    z1 = S1.group_element(theta1)
-    z2 = S1.group_element(theta2)
-    theta1_hat = S1.algebra_element(theta1)
-    cartesian1 = S1.decompose_cartesian_element(theta1)
-    inverse_z1 = S1.group_inverse(z1)
-    action_z1 = S1.group_action(z1, action_vec)
-    composition_z1_z2 = S1.group_composition(z1, z2)
-    right_plus_z1_theta1 = S1.plus_right(z1, theta1)
-    left_plus_z1_theta1 = S1.plus_left(z1, theta1)
-    right_minus_z1_z2 = S1.minus_right(z1, z2)
-    left_minus_z1_z2 = S1.minus_left(z1, z2)
-    adjoint_z1 = S1.adjoint(z1)
-    jacobian_inverse_z1 = S1.jacobian_inverse(z1)
-    jacobian_composition_1_z1_z2 = S1.jacobian_composition_1(z1, z2)
-    jacobian_composition_2_z1_z2 = S1.jacobian_composition_2(z1, z2)
-    jacobian_right_theta1 = S1.jacobian_right(theta1)
-    jacobian_right_inverse_theta1 = S1.jacobian_right_inverse(theta1)
-    jacobian_left_theta1 = S1.jacobian_left(theta1)
-    jacobian_left_inverse_theta1 = S1.jacobian_left_inverse(theta1)
-    jacobian_plus_right_1_z1_theta1 = S1.jacobian_plus_right_1(z1, theta1)
-    jacobian_plus_right_2_z1_theta1 = S1.jacobian_plus_right_2(z1, theta1)
-    jacobian_minus_right_1_z1_z2 = S1.jacobian_minus_right_1(z1, z2)
-    jacobian_minus_right_2_z1_z2 = S1.jacobian_minus_right_2(z1, z2)
-    jacobian_rotation_action_1_z1 = S1.jacobian_rotation_action_1(z1, action_vec)
-    jacobian_rotation_action_2_z1 = S1.jacobian_rotation_action_2(z1, action_vec)
-    assert np.allclose(S1.group_composition(z1, S1.group_inverse(z1)), S1.group_composition(S1.group_inverse(z1), z1), atol = error_tol)
-    assert np.allclose(S1.group_composition(z1, S1.group_inverse(z1)), S1.group_identity(), atol = error_tol)
-    assert np.allclose(S1.group_action(S1.group_composition(z1, z2), action_vec), S1.group_action(z1, S1.group_action(z2, action_vec)), atol = error_tol)
-    assert np.allclose(z1, S1.exp(theta1_hat), atol = error_tol)
-    assert np.allclose(z1, S1.Exp(theta1), atol = error_tol)
-    assert np.allclose(theta1, S1.compose_cartesian_element(cartesian1), atol = error_tol)
-    assert np.allclose(theta1_hat, S1.hat(theta1), atol = error_tol)
-    assert np.allclose(theta1, S1.vee(theta1_hat), atol = error_tol)
-    assert np.allclose(theta1, S1.Log(z1), atol = error_tol)
-    assert np.allclose(theta1_hat, S1.log(z1), atol = error_tol)
-    assert np.allclose(right_plus_z1_theta1, left_plus_z1_theta1, atol = error_tol)
-    assert np.allclose(S1.adjoint(S1.Exp(theta1)), S1.jacobian_left(theta1) @ S1.jacobian_right_inverse(theta1), atol = error_tol)
-    assert np.allclose(S1.adjoint(S1.group_composition(z1, z2)), S1.adjoint(z1) @ S1.adjoint(z2), atol = error_tol)
-    assert np.allclose(right_plus_z1_theta1, S1.plus_left(z1, adjoint_z1 @ theta1), atol = error_tol)
-    if printing: print("\nAll tests passed for S1 rotation group!")
+def blk(A, b):
+    n = A.shape[0]; M = np.zeros((n + 1, n + 1)); M[:n, :n] = A; M[:n, n] = b; return M
 
-def S3_rotation_tests(printing = False, try_edge_case = False):
-    if not try_edge_case:
-        tau1 = np.random.randn(3,)
-        tau2 = np.random.randn(3,)
-        action_vec = np.random.randn(3,)
-    else:
-        tau1 = np.random.randn(3,) * small_case_tol
-        tau2 = np.random.randn(3,) * small_case_tol
-        action_vec = np.random.randn(3,) * small_case_tol
+def q2R(q):
+    w, x, y, z = q
+    return np.array([[1 - 2 * (y * y + z * z), 2 * (x * y - w * z), 2 * (x * z + w * y)],
+                     [2 * (x * y + w * z), 1 - 2 * (x * x + z * z), 2 * (y * z - w * x)],
+                     [2 * (x * z - w * y), 2 * (y * z + w * x), 1 - 2 * (x * x + y * y)]])
 
-    # printing
-    if printing:
-        print("\n- S3 rotation group printings:\n")
-        q1 = S3.group_element(tau1)
-        q2 = S3.group_element(tau2)
-        tau1_hat = S3.algebra_element(tau1)
-        cartesian1 = S3.decompose_cartesian_element(tau1)
-        print(f"tau1:\n {tau1}")
-        print(f"tau2:\n {tau2}")
-        print(f"action_vec:\n {action_vec}")
-        print(f"q1:\n {q1}")
-        print(f"q2:\n {q2}")
-        print(f"tau1_hat:\n {tau1_hat}")
-        print(f"cartesian1:\n {cartesian1}")
-        print(f"inverse_q1:\n {S3.group_inverse(q1)}")
-        print(f"action_q1:\n {S3.group_action(q1, action_vec)}")
-        print(f"composition_q1_q2:\n {S3.group_composition(q1, q2)}")
-        print(f"right_plus_q1_tau1:\n {S3.plus_right(q1, tau1)}")
-        print(f"left_plus_q1_tau1:\n {S3.plus_left(q1, tau1)}")
-        print(f"right_minus_q1_q2:\n {S3.minus_right(q1, q2)}")
-        print(f"left_minus_q1_q2:\n {S3.minus_left(q1, q2)}")
-        print(f"adjoint_q1:\n {S3.adjoint(q1)}")
-        print(f"jacobian_inverse_q1:\n {S3.jacobian_inverse(q1)}")
-        print(f"jacobian_composition_1_q1_q2:\n {S3.jacobian_composition_1(q1, q2)}")
-        print(f"jacobian_composition_2_q1_q2:\n {S3.jacobian_composition_2(q1, q2)}")
-        print(f"jacobian_right_tau1:\n {S3.jacobian_right(tau1)}")
-        print(f"jacobian_right_inverse_tau1:\n {S3.jacobian_right_inverse(tau1)}")
-        print(f"jacobian_left_tau1:\n {S3.jacobian_left(tau1)}")
-        print(f"jacobian_left_inverse_tau1:\n {S3.jacobian_left_inverse(tau1)}")
-        print(f"jacobian_plus_right_1_q1_tau1:\n {S3.jacobian_plus_right_1(q1, tau1)}")
-        print(f"jacobian_plus_right_2_q1_tau1:\n {S3.jacobian_plus_right_2(q1, tau1)}")
-        print(f"jacobian_minus_right_1_q1_q2:\n {S3.jacobian_minus_right_1(q1, q2)}")
-        print(f"jacobian_minus_right_2_q1_q2:\n {S3.jacobian_minus_right_2(q1, q2)}")
-        print(f"jacobian_rotation_action_1_q1:\n {S3.jacobian_rotation_action_1(q1, action_vec)}")
-        print(f"jacobian_rotation_action_2_q1:\n {S3.jacobian_rotation_action_2(q1, action_vec)}")
+def R2q(R):
+    x, y, z, w = Rotation.from_matrix(R).as_quat(); return np.array([w, x, y, z])
 
-    # testing
-    if printing: print("\n- S3 rotation group testings ...\n")
-    q1 = S3.group_element(tau1)
-    q2 = S3.group_element(tau2)
-    tau1_hat = S3.algebra_element(tau1)
-    cartesian1_theta, cartesian1_u = S3.decompose_cartesian_element(tau1)
-    inverse_q1 = S3.group_inverse(q1)
-    action_q1 = S3.group_action(q1, action_vec)
-    composition_q1_q2 = S3.group_composition(q1, q2)
-    right_plus_q1_tau1 = S3.plus_right(q1, tau1)
-    left_plus_q1_tau1 = S3.plus_left(q1, tau1)
-    right_minus_q1_q2 = S3.minus_right(q1, q2)
-    left_minus_q1_q2 = S3.minus_left(q1, q2)
-    adjoint_q1 = S3.adjoint(q1)
-    jacobian_inverse_q1 = S3.jacobian_inverse(q1)
-    jacobian_composition_1_q1_q2 = S3.jacobian_composition_1(q1, q2)
-    jacobian_composition_2_q1_q2 = S3.jacobian_composition_2(q1, q2)
-    jacobian_right_tau1 = S3.jacobian_right(tau1)
-    jacobian_right_inverse_tau1 = S3.jacobian_right_inverse(tau1)
-    jacobian_left_tau1 = S3.jacobian_left(tau1)
-    jacobian_left_inverse_tau1 = S3.jacobian_left_inverse(tau1)
-    jacobian_plus_right_1_q1_tau1 = S3.jacobian_plus_right_1(q1, tau1)
-    jacobian_plus_right_2_q1_tau1 = S3.jacobian_plus_right_2(q1, tau1)
-    jacobian_minus_right_1_q1_q2 = S3.jacobian_minus_right_1(q1, q2)
-    jacobian_minus_right_2_q1_q2 = S3.jacobian_minus_right_2(q1, q2)
-    jacobian_rotation_action_1_q1 = S3.jacobian_rotation_action_1(q1, action_vec)
-    jacobian_rotation_action_2_q1 = S3.jacobian_rotation_action_2(q1, action_vec)
-    assert np.allclose(S3.group_composition(q1, S3.group_inverse(q1)), S3.group_composition(S3.group_inverse(q1), q1), atol = error_tol)
-    assert np.allclose(S3.group_composition(q1, S3.group_inverse(q1)), S3.group_identity(), atol = error_tol)
-    assert np.allclose(S3.group_action(S3.group_composition(q1, q2), action_vec), S3.group_action(q1, S3.group_action(q2, action_vec)), atol = error_tol)
-    assert np.allclose(q1, S3.exp(tau1_hat), atol = error_tol)
-    assert np.allclose(q1, S3.Exp(tau1), atol = error_tol)
-    assert np.allclose(tau1, S3.compose_cartesian_element(cartesian1_theta, cartesian1_u), atol = error_tol)
-    assert np.allclose(tau1_hat, S3.hat(tau1), atol = error_tol)
-    assert np.allclose(tau1, S3.vee(tau1_hat), atol = error_tol)
-    assert np.allclose(tau1, S3.Log(q1), atol = error_tol)
-    assert np.allclose(tau1_hat, S3.log(q1), atol = error_tol)
-    assert np.allclose(right_plus_q1_tau1, left_plus_q1_tau1, atol = error_tol)
-    assert np.allclose(S3.adjoint(S3.Exp(tau1)), S3.jacobian_left(tau1) @ S3.jacobian_right_inverse(tau1), atol = error_tol)
-    assert np.allclose(S3.adjoint(S3.group_composition(q1, q2)), S3.adjoint(q1) @ S3.adjoint(q2), atol = error_tol)
-    assert np.allclose(right_plus_q1_tau1, S3.plus_left(q1, adjoint_q1 @ tau1), atol = error_tol)
-    if printing: print("\nAll tests passed for S3 rotation group!")
 
-def SO2_rotation_tests(printing = False, try_edge_case = False):
-    if not try_edge_case:
-        theta1 = np.random.randn(1)
-        theta2 = np.random.randn(1)
-        action_vec = np.random.randn(2,)
-    else:
-        theta1 = np.random.randn(1) * small_case_tol
-        theta2 = np.random.randn(1) * small_case_tol
-        action_vec = np.random.randn(2,) * small_case_tol
+class Spec:
+    """Describes one group through independent (matrix) ground truth."""
+    def __init__(self, mod, dim, pt, act_name, hatm, vee_i, tomat, hat_lib, rand_tau, rand_x, act):
+        self.mod, self.dim, self.pt, self.act_name = mod, dim, pt, act_name
+        self.hatm, self.vee_i, self.tomat, self.hat_lib = hatm, vee_i, tomat, hat_lib
+        self.rand_tau, self.rand_x, self.act = rand_tau, rand_x, act
 
-    # printing
-    if printing:
-        print("\n- SO2 rotation group printings:")
-        R1 = SO2.group_element(theta1)
-        R2 = SO2.group_element(theta2)
-        theta1_hat = SO2.algebra_element(theta1)
-        cartesian1 = SO2.decompose_cartesian_element(theta1)
-        print(f"theta1:\n {theta1}")
-        print(f"theta2:\n {theta2}")
-        print(f"action_vec:\n {action_vec}")
-        print(f"R1:\n {R1}")
-        print(f"R2:\n {R2}")
-        print(f"theta1_hat:\n {theta1_hat}")
-        print(f"cartesian1:\n {cartesian1}")
-        print(f"inverse_R1:\n {SO2.group_inverse(R1)}")
-        print(f"action_R1:\n {SO2.group_action(R1, action_vec)}")
-        print(f"composition_R1_R2:\n {SO2.group_composition(R1, R2)}")
-        print(f"right_plus_R1_theta1:\n {SO2.plus_right(R1, theta1)}")
-        print(f"left_plus_R1_theta1:\n {SO2.plus_left(R1, theta1)}")
-        print(f"right_minus_R1_R2:\n {SO2.minus_right(R1, R2)}")
-        print(f"left_minus_R1_R2:\n {SO2.minus_left(R1, R2)}")
-        print(f"adjoint_R1:\n {SO2.adjoint(R1)}")
-        print(f"jacobian_inverse_R1:\n {SO2.jacobian_inverse(R1)}")
-        print(f"jacobian_composition_1_R1_R2:\n {SO2.jacobian_composition_1(R1, R2)}")
-        print(f"jacobian_composition_2_R1_R2:\n {SO2.jacobian_composition_2(R1, R2)}")
-        print(f"jacobian_right_theta1:\n {SO2.jacobian_right(theta1)}")
-        print(f"jacobian_right_inverse_theta1:\n {SO2.jacobian_right_inverse(theta1)}")
-        print(f"jacobian_left_theta1:\n {SO2.jacobian_left(theta1)}")
-        print(f"jacobian_left_inverse_theta1:\n {SO2.jacobian_left_inverse(theta1)}")
-        print(f"jacobian_plus_right_1_R1_theta1:\n {SO2.jacobian_plus_right_1(R1, theta1)}")
-        print(f"jacobian_plus_right_2_R1_theta1:\n {SO2.jacobian_plus_right_2(R1, theta1)}")
-        print(f"jacobian_minus_right_1_R1_R2:\n {SO2.jacobian_minus_right_1(R1, R2)}")
-        print(f"jacobian_minus_right_2_R1_R2:\n {SO2.jacobian_minus_right_2(R1, R2)}")
-        print(f"jacobian_rotation_action_1_R1:\n {SO2.jacobian_rotation_action_1(R1, action_vec)}")
-        print(f"jacobian_rotation_action_2_R1:\n {SO2.jacobian_rotation_action_2(R1, action_vec)}")
 
-    # testing
-    if printing: print("\n- SO2 rotation group testings:")
-    R1 = SO2.group_element(theta1)
-    R2 = SO2.group_element(theta2)
-    theta1_hat = SO2.algebra_element(theta1)
-    cartesian1 = SO2.decompose_cartesian_element(theta1)
-    inverse_R1 = SO2.group_inverse(R1)
-    action_R1 = SO2.group_action(R1, action_vec)
-    composition_R1_R2 = SO2.group_composition(R1, R2)
-    right_plus_R1_theta1 = SO2.plus_right(R1, theta1)
-    left_plus_R1_theta1 = SO2.plus_left(R1, theta1)
-    right_minus_R1_R2 = SO2.minus_right(R1, R2)
-    left_minus_R1_R2 = SO2.minus_left(R1, R2)
-    adjoint_R1 = SO2.adjoint(R1)
-    jacobian_inverse_R1 = SO2.jacobian_inverse(R1)
-    jacobian_composition_1_R1_R2 = SO2.jacobian_composition_1(R1, R2)
-    jacobian_composition_2_R1_R2 = SO2.jacobian_composition_2(R1, R2)
-    jacobian_right_theta1 = SO2.jacobian_right(theta1)
-    jacobian_right_inverse_theta1 = SO2.jacobian_right_inverse(theta1)
-    jacobian_left_theta1 = SO2.jacobian_left(theta1)
-    jacobian_left_inverse_theta1 = SO2.jacobian_left_inverse(theta1)
-    jacobian_plus_right_1_R1_theta1 = SO2.jacobian_plus_right_1(R1, theta1)
-    jacobian_plus_right_2_R1_theta1 = SO2.jacobian_plus_right_2(R1, theta1)
-    jacobian_minus_right_1_R1_R2 = SO2.jacobian_minus_right_1(R1, R2)
-    jacobian_minus_right_2_R1_R2 = SO2.jacobian_minus_right_2(R1, R2)
-    jacobian_rotation_action_1_R1 = SO2.jacobian_rotation_action_1(R1, action_vec)
-    jacobian_rotation_action_2_R1 = SO2.jacobian_rotation_action_2(R1, action_vec)
-    assert np.allclose(SO2.group_composition(R1, SO2.group_inverse(R1)), SO2.group_composition(SO2.group_inverse(R1), R1), atol = error_tol)
-    assert np.allclose(SO2.group_composition(R1, SO2.group_inverse(R1)), SO2.group_identity(), atol = error_tol)
-    assert np.allclose(SO2.group_action(SO2.group_composition(R1, R2), action_vec), SO2.group_action(R1, SO2.group_action(R2, action_vec)), atol = error_tol)
-    assert np.allclose(R1, SO2.exp(theta1_hat), atol = error_tol)
-    assert np.allclose(R1, SO2.Exp(theta1), atol = error_tol)
-    assert np.allclose(theta1, SO2.compose_cartesian_element(cartesian1), atol = error_tol)
-    assert np.allclose(theta1_hat, SO2.hat(theta1), atol = error_tol)
-    assert np.allclose(theta1, SO2.vee(theta1_hat), atol = error_tol)
-    assert np.allclose(theta1, SO2.Log(R1), atol = error_tol)
-    assert np.allclose(theta1_hat, SO2.log(R1), atol = error_tol)
-    assert np.allclose(right_plus_R1_theta1, left_plus_R1_theta1, atol = error_tol)
-    assert np.allclose(SO2.adjoint(SO2.Exp(theta1)), SO2.jacobian_left(theta1) @ SO2.jacobian_right_inverse(theta1), atol = error_tol)
-    assert np.allclose(SO2.adjoint(SO2.group_composition(R1, R2)), SO2.adjoint(R1) @ SO2.adjoint(R2), atol = error_tol)
-    assert np.allclose(right_plus_R1_theta1, SO2.plus_left(R1, adjoint_R1 @ theta1), atol = error_tol)
-    if printing: print("\nAll tests passed for SO2 rotation group!")
+def make_specs(regime, rng):
+    def angle_vec(lo, hi):
+        v = rng.standard_normal(3); v /= np.linalg.norm(v); return v * rng.uniform(lo, hi)
+    rng_ang = {"normal": (0.1, 3.0), "small": (1e-9, 1e-3), "tiny": (1e-12, 1e-7), "near_pi": (np.pi - 1e-4, np.pi - 1e-9)}[regime]
+    tau_ang = lambda: angle_vec(*rng_ang)
+    X_ang = lambda: angle_vec(0.1, 3.0)
+    specs = {}
+    specs["SO3"] = Spec(SO3, 3, 3, "rotation", vh, vv, lambda X: X, vh, tau_ang,
+                        lambda: expm(vh(X_ang())), lambda X, p: X @ p)
+    specs["S3"] = Spec(S3, 3, 3, "rotation", vh, vv, q2R, lambda t: t / 2, tau_ang,
+                       lambda: R2q(expm(vh(X_ang()))), lambda X, p: q2R(X) @ p)
+    se3h = lambda t: blk(vh(t[3:]), t[:3])
+    specs["SE3"] = Spec(SE3, 6, 3, "motion", se3h, lambda M: np.concatenate([M[:3, 3], vv(M[:3, :3])]),
+                        lambda X: X, se3h,
+                        lambda: np.concatenate([rng.standard_normal(3), tau_ang()]),
+                        lambda: expm(se3h(np.concatenate([rng.standard_normal(3) * 2, X_ang()]))),
+                        lambda X, p: X[:3, :3] @ p + X[:3, 3])
+    se2h = lambda t: blk(np.array([[0, -t[2]], [t[2], 0.]]), t[:2])
+    ang2 = {"normal": (0.1, 3.0), "small": (1e-9, 1e-3), "tiny": (1e-12, 1e-7), "near_pi": (np.pi - 1e-4, np.pi - 1e-9)}[regime]
+    specs["SE2"] = Spec(SE2, 3, 2, "motion", se2h, lambda M: np.array([M[0, 2], M[1, 2], M[1, 0]]),
+                        lambda X: X, se2h,
+                        lambda: np.array([*rng.standard_normal(2), rng.uniform(*ang2) * rng.choice([-1, 1])]),
+                        lambda: expm(se2h(np.array([*rng.standard_normal(2) * 2, rng.uniform(-3, 3)]))),
+                        lambda X, p: X[:2, :2] @ p + X[:2, 2])
+    Th = lambda t: blk(np.zeros((3, 3)), t)
+    specs["T"] = Spec(T, 3, 3, "translation", Th, lambda M: M[:3, 3], lambda X: X, Th,
+                      lambda: rng.standard_normal(3), lambda: expm(Th(rng.standard_normal(3))),
+                      lambda X, p: X[:3, 3] + p)
+    return specs
 
-def SO3_rotation_tests(printing = False, try_edge_case = False):
-    if not try_edge_case:
-        tau1 = np.random.randn(3,)
-        tau2 = np.random.randn(3,)
-        action_vec = np.random.randn(3,)
-    else:
-        tau1 = np.random.randn(3,) * small_case_tol
-        tau2 = np.random.randn(3,) * small_case_tol
-        action_vec = np.random.randn(3,) * small_case_tol
 
-    # printing
-    if printing:
-        print("\n- SO3 rotation group printings:")
-        R1 = SO3.group_element(tau1)
-        R2 = SO3.group_element(tau2)
-        theta1_hat = SO3.algebra_element(tau1)
-        cartesian1 = SO3.decompose_cartesian_element(tau1)
-        print(f"tau1:\n {tau1}")
-        print(f"tau2:\n {tau2}")
-        print(f"action_vec:\n {action_vec}")
-        print(f"R1:\n {R1}")
-        print(f"R2:\n {R2}")
-        print(f"theta1_hat:\n {theta1_hat}")
-        print(f"cartesian1:\n {cartesian1}")
-        print(f"inverse_R1:\n {SO3.group_inverse(R1)}")
-        print(f"action_R1:\n {SO3.group_action(R1, action_vec)}")
-        print(f"composition_R1_R2:\n {SO3.group_composition(R1, R2)}")
-        print(f"right_plus_R1_tau1:\n {SO3.plus_right(R1, tau1)}")
-        print(f"left_plus_R1_tau1:\n {SO3.plus_left(R1, tau1)}")
-        print(f"right_minus_R1_R2:\n {SO3.minus_right(R1, R2)}")
-        print(f"left_minus_R1_R2:\n {SO3.minus_left(R1, R2)}")
-        print(f"adjoint_R1:\n {SO3.adjoint(R1)}")
-        print(f"jacobian_inverse_R1:\n {SO3.jacobian_inverse(R1)}")
-        print(f"jacobian_composition_1_R1_R2:\n {SO3.jacobian_composition_1(R1, R2)}")
-        print(f"jacobian_composition_2_R1_R2:\n {SO3.jacobian_composition_2(R1, R2)}")
-        print(f"jacobian_right_tau1:\n {SO3.jacobian_right(tau1)}")
-        print(f"jacobian_right_inverse_tau1:\n {SO3.jacobian_right_inverse(tau1)}")
-        print(f"jacobian_left_tau1:\n {SO3.jacobian_left(tau1)}")
-        print(f"jacobian_left_inverse_tau1:\n {SO3.jacobian_left_inverse(tau1)}")
-        print(f"jacobian_plus_right_1_R1_tau1:\n {SO3.jacobian_plus_right_1(R1, tau1)}")
-        print(f"jacobian_plus_right_2_R1_tau1:\n {SO3.jacobian_plus_right_2(R1, tau1)}")
-        print(f"jacobian_minus_right_1_R1_R2:\n {SO3.jacobian_minus_right_1(R1, R2)}")
-        print(f"jacobian_minus_right_2_R1_R2:\n {SO3.jacobian_minus_right_2(R1, R2)}")
-        print(f"jacobian_rotation_action_1_R1:\n {SO3.jacobian_rotation_action_1(R1, action_vec)}")
-        print(f"jacobian_rotation_action_2_R1:\n {SO3.jacobian_rotation_action_2(R1, action_vec)}")
+def check_group(name, regime, n_samples=25, seed=0):
+    """Returns a list of failure descriptions (empty list == all good)."""
+    rng = np.random.default_rng(seed)
+    g = make_specs(regime, rng)[name]; m, d = g.mod, g.dim
+    fails = []
 
-    # testing
-    if printing: print("\n- SO3 rotation group testings:")
-    R1 = SO3.group_element(tau1)
-    R2 = SO3.group_element(tau2)
-    theta1_hat = SO3.algebra_element(tau1)
-    cartesian1_1, cartesian1_2 = SO3.decompose_cartesian_element(tau1)
-    inverse_R1 = SO3.group_inverse(R1)
-    action_R1 = SO3.group_action(R1, action_vec)
-    composition_R1_R2 = SO3.group_composition(R1, R2)
-    right_plus_R1_tau1 = SO3.plus_right(R1, tau1)
-    left_plus_R1_tau1 = SO3.plus_left(R1, tau1)
-    right_minus_R1_R2 = SO3.minus_right(R1, R2)
-    left_minus_R1_R2 = SO3.minus_left(R1, R2)
-    adjoint_R1 = SO3.adjoint(R1)
-    jacobian_inverse_R1 = SO3.jacobian_inverse(R1)
-    jacobian_composition_1_R1_R2 = SO3.jacobian_composition_1(R1, R2)
-    jacobian_composition_2_R1_R2 = SO3.jacobian_composition_2(R1, R2)
-    jacobian_right_tau1 = SO3.jacobian_right(tau1)
-    jacobian_right_inverse_tau1 = SO3.jacobian_right_inverse(tau1)
-    jacobian_left_tau1 = SO3.jacobian_left(tau1)
-    jacobian_left_inverse_tau1 = SO3.jacobian_left_inverse(tau1)
-    jacobian_plus_right_1_R1_tau1 = SO3.jacobian_plus_right_1(R1, tau1)
-    jacobian_plus_right_2_R1_tau1 = SO3.jacobian_plus_right_2(R1, tau1)
-    jacobian_minus_right_1_R1_R2 = SO3.jacobian_minus_right_1(R1, R2)
-    jacobian_minus_right_2_R1_R2 = SO3.jacobian_minus_right_2(R1, R2)
-    jacobian_rotation_action_1_R1 = SO3.jacobian_rotation_action_1(R1, action_vec)
-    jacobian_rotation_action_2_R1 = SO3.jacobian_rotation_action_2(R1, action_vec)
-    assert np.allclose(SO3.group_composition(R1, SO3.group_inverse(R1)), SO3.group_composition(SO3.group_inverse(R1), R1), atol = error_tol)
-    assert np.allclose(SO3.group_composition(R1, SO3.group_inverse(R1)), SO3.group_identity(), atol = error_tol)
-    assert np.allclose(SO3.group_action(SO3.group_composition(R1, R2), action_vec), SO3.group_action(R1, SO3.group_action(R2, action_vec)), atol = error_tol)
-    assert np.allclose(R1, SO3.exp(theta1_hat), atol = error_tol)
-    assert np.allclose(R1, SO3.Exp(tau1), atol = error_tol)
-    assert np.allclose(tau1, SO3.compose_cartesian_element(cartesian1_1, cartesian1_2), atol = error_tol)
-    assert np.allclose(theta1_hat, SO3.hat(tau1), atol = error_tol)
-    assert np.allclose(tau1, SO3.vee(theta1_hat), atol = error_tol)
-    assert np.allclose(tau1, SO3.Log(R1), atol = error_tol)
-    assert np.allclose(theta1_hat, SO3.log(R1), atol = error_tol)
-    assert np.allclose(right_plus_R1_tau1, left_plus_R1_tau1, atol = error_tol)
-    assert np.allclose(SO3.adjoint(SO3.Exp(tau1)), SO3.jacobian_left(tau1) @ SO3.jacobian_right_inverse(tau1), atol = error_tol)
-    assert np.allclose(SO3.adjoint(SO3.group_composition(R1, R2)), SO3.adjoint(R1) @ SO3.adjoint(R2), atol = error_tol)
-    assert np.allclose(right_plus_R1_tau1, SO3.plus_left(R1, adjoint_R1 @ tau1), atol = error_tol)
-    if printing: print("\nAll tests passed for SO3 rotation group!")
+    def chk(label, a, b, atol=ATOL):
+        a = np.asarray(a, dtype=float); b = np.asarray(b, dtype=float)
+        if a.size != b.size or not np.all(np.isfinite(a)) or not np.allclose(a.reshape(-1), b.reshape(-1), atol=atol):
+            fails.append(f"{name}.{label} [{regime}]")
 
-def SE2_rigid_motion_tests(printing = False, try_edge_case = False):
-    if not try_edge_case:
-        tau1 = np.random.randn(3,)
-        tau2 = np.random.randn(3,)
-        action_vec = np.random.randn(3,)
-    else:
-        tau1 = np.random.randn(3,) * small_case_tol
-        tau2 = np.random.randn(3,) * small_case_tol
-        action_vec = np.random.randn(3,) * small_case_tol
+    def fd(f):
+        return np.array([(np.asarray(f(np.eye(d)[i] * H)) - np.asarray(f(-np.eye(d)[i] * H))) / (2 * H) for i in range(d)]).T
 
-    # printing
-    if printing:
-        print("\n- SE2 rigid motion group printings:")
-        M1 = SE2.group_element(tau1)
-        M2 = SE2.group_element(tau2)
-        tau1_hat = SE2.algebra_element(tau1)
-        cartesian1 = SE2.decompose_cartesian_element(tau1)
-        print(f"tau1:\n {tau1}")
-        print(f"tau2:\n {tau2}")
-        print(f"action_vec:\n {action_vec}")
-        print(f"M1:\n {M1}")
-        print(f"M2:\n {M2}")
-        print(f"tau1_hat:\n {tau1_hat}")
-        print(f"cartesian1:\n {cartesian1}")
-        print(f"inverse_M1:\n {SE2.group_inverse(M1)}")
-        print(f"action_M1:\n {SE2.group_action(M1, action_vec)}")
-        print(f"composition_M1_M2:\n {SE2.group_composition(M1, M2)}")
-        print(f"right_plus_M1_tau1:\n {SE2.plus_right(M1, tau1)}")
-        print(f"left_plus_M1_tau1:\n {SE2.plus_left(M1, tau1)}")
-        print(f"right_minus_M1_M2:\n {SE2.minus_right(M1, M2)}")
-        print(f"left_minus_M1_M2:\n {SE2.minus_left(M1, M2)}")
-        print(f"adjoint_M1:\n {SE2.adjoint(M1)}")
-        print(f"jacobian_inverse_M1:\n {SE2.jacobian_inverse(M1)}")
-        print(f"jacobian_composition_1_M1_M2:\n {SE2.jacobian_composition_1(M1, M2)}")
-        print(f"jacobian_composition_2_M1_M2:\n {SE2.jacobian_composition_2(M1, M2)}")
-        print(f"jacobian_right_tau1:\n {SE2.jacobian_right(tau1)}")
-        print(f"jacobian_right_inverse_tau1:\n {SE2.jacobian_right_inverse(tau1)}")
-        print(f"jacobian_left_tau1:\n {SE2.jacobian_left(tau1)}")
-        print(f"jacobian_left_inverse_tau1:\n {SE2.jacobian_left_inverse(tau1)}")
-        print(f"jacobian_plus_right_1_M1_tau1:\n {SE2.jacobian_plus_right_1(M1, tau1)}")
-        print(f"jacobian_plus_right_2_M1_tau1:\n {SE2.jacobian_plus_right_2(M1, tau1)}")
-        print(f"jacobian_minus_right_1_M1_M2:\n {SE2.jacobian_minus_right_1(M1, M2)}")
-        print(f"jacobian_minus_right_2_M1_M2:\n {SE2.jacobian_minus_right_2(M1, M2)}")
-        print(f"jacobian_motion_action_1_M1:\n {SE2.jacobian_motion_action_1(M1, action_vec)}")
-        print(f"jacobian_motion_action_2_M1:\n {SE2.jacobian_motion_action_2(M1, action_vec)}")
+    pr, ms = m.plus_right, m.minus_right
+    asm = lambda fn, *a: np.asarray(getattr(m, fn)(*a)).reshape(d, d)
+    for _ in range(n_samples):
+        tau, X, Y, p = g.rand_tau(), g.rand_x(), g.rand_x(), rng.standard_normal(g.pt)
+        E = m.Exp(tau); Xm = g.tomat(X)
+        chk("Exp == expm(hat)", g.tomat(E), expm(g.hatm(tau)))
+        chk("group_element == expm(hat)", g.tomat(m.group_element(tau)), expm(g.hatm(tau)))
+        chk("hat / algebra_element", m.hat(tau), g.hat_lib(tau)); chk("algebra_element", m.algebra_element(tau), g.hat_lib(tau))
+        chk("vee(hat(tau)) == tau", m.vee(m.hat(tau)), tau)
+        chk("exp(hat(tau)) == expm", g.tomat(m.exp(m.hat(tau))), expm(g.hatm(tau)))
+        chk("Log(Exp(tau)) == tau", m.Log(E), tau)
+        chk("vee(log(Exp(tau))) == tau", m.vee(m.log(E)), tau)
+        chk("composition", g.tomat(m.group_composition(X, Y)), Xm @ g.tomat(Y))
+        chk("inverse", g.tomat(m.group_inverse(X)), np.linalg.inv(Xm))
+        chk("plus_right", g.tomat(pr(X, tau)), Xm @ expm(g.hatm(tau)))
+        chk("plus_left", g.tomat(m.plus_left(X, tau)), expm(g.hatm(tau)) @ Xm)
+        small = tau * 0.5 if regime == "normal" else tau
+        chk("minus_right(X+t, X) == t", ms(pr(X, small), X), small)
+        chk("minus_left(t+X, X) == t", m.minus_left(m.plus_left(X, small), X), small)
+        chk("adjoint", asm("adjoint", X) @ tau, g.vee_i(Xm @ g.hatm(tau) @ np.linalg.inv(Xm)))
+        Xi, XY = m.group_inverse(X), m.group_composition(X, Y)
+        chk("jacobian_inverse", asm("jacobian_inverse", X), fd(lambda e: ms(m.group_inverse(pr(X, e)), Xi)))
+        chk("jacobian_composition_1", asm("jacobian_composition_1", X, Y), fd(lambda e: ms(m.group_composition(pr(X, e), Y), XY)))
+        chk("jacobian_composition_2", asm("jacobian_composition_2", X, Y), fd(lambda e: ms(m.group_composition(X, pr(Y, e)), XY)))
+        Jr, Jl = asm("jacobian_right", tau), asm("jacobian_left", tau)
+        chk("jacobian_right", Jr, fd(lambda e: ms(m.Exp(tau + e), E)))
+        chk("jacobian_left", Jl, fd(lambda e: m.minus_left(m.Exp(tau + e), E)))
+        chk("jacobian_right_inverse", asm("jacobian_right_inverse", tau), np.linalg.inv(Jr))
+        chk("jacobian_left_inverse", asm("jacobian_left_inverse", tau), np.linalg.inv(Jl))
+        chk("Ad(Exp(tau)) == Jl Jr^-1", asm("adjoint", E), Jl @ np.linalg.inv(Jr))
+        Xt = pr(X, tau)
+        chk("jacobian_plus_right_1", asm("jacobian_plus_right_1", X, tau), fd(lambda e: ms(pr(pr(X, e), tau), Xt)))
+        chk("jacobian_plus_right_2", asm("jacobian_plus_right_2", X, tau), fd(lambda e: ms(pr(X, tau + e), Xt)))
+        Z = np.asarray(ms(X, Y))
+        chk("jacobian_minus_right_1", asm("jacobian_minus_right_1", X, Y), fd(lambda e: np.asarray(ms(pr(X, e), Y)) - Z))
+        chk("jacobian_minus_right_2", asm("jacobian_minus_right_2", X, Y), fd(lambda e: np.asarray(ms(X, pr(Y, e))) - Z))
+        an = f"jacobian_{g.act_name}_action_"
+        chk(an + "1", np.asarray(getattr(m, an + "1")(X, p)).reshape(g.pt, d), fd(lambda e: g.act(pr(X, e), p)))
+        E_pt = np.eye(g.pt)
+        chk(an + "2", np.asarray(getattr(m, an + "2")(X, p)).reshape(g.pt, g.pt),
+            np.array([(g.act(X, p + E_pt[i] * H) - g.act(X, p - E_pt[i] * H)) / (2 * H) for i in range(g.pt)]).T)
+    return sorted(set(fails))
 
-    # testing
-    if printing: print("\n- SE2 rigid motion group testings:")
-    M1 = SE2.group_element(tau1)
-    M2 = SE2.group_element(tau2)
-    tau1_hat = SE2.algebra_element(tau1)
-    cartesian1_1, cartesian1_2 = SE2.decompose_cartesian_element(tau1)
-    inverse_M1 = SE2.group_inverse(M1)
-    action_M1 = SE2.group_action(M1, action_vec)
-    composition_M1_M2 = SE2.group_composition(M1, M2)
-    right_plus_M1_tau1 = SE2.plus_right(M1, tau1)
-    left_plus_M1_tau1 = SE2.plus_left(M1, tau1)
-    right_minus_M1_M2 = SE2.minus_right(M1, M2)
-    left_minus_M1_M2 = SE2.minus_left(M1, M2)
-    adjoint_M1 = SE2.adjoint(M1)
-    jacobian_inverse_M1 = SE2.jacobian_inverse(M1)
-    jacobian_composition_1_M1_M2 = SE2.jacobian_composition_1(M1, M2)
-    jacobian_composition_2_M1_M2 = SE2.jacobian_composition_2(M1, M2)
-    jacobian_right_tau1 = SE2.jacobian_right(tau1)
-    jacobian_right_inverse_tau1 = SE2.jacobian_right_inverse(tau1)
-    jacobian_left_tau1 = SE2.jacobian_left(tau1)
-    jacobian_left_inverse_tau1 = SE2.jacobian_left_inverse(tau1)
-    jacobian_plus_right_1_M1_tau1 = SE2.jacobian_plus_right_1(M1, tau1)
-    jacobian_plus_right_2_M1_tau1 = SE2.jacobian_plus_right_2(M1, tau1)
-    jacobian_minus_right_1_M1_M2 = SE2.jacobian_minus_right_1(M1, M2)
-    jacobian_minus_right_2_M1_M2 = SE2.jacobian_minus_right_2(M1, M2)
-    jacobian_motion_action_1_M1 = SE2.jacobian_motion_action_1(M1, action_vec)
-    jacobian_motion_action_2_M1 = SE2.jacobian_motion_action_2(M1, action_vec)
-    assert np.allclose(SE2.group_composition(M1, SE2.group_inverse(M1)), SE2.group_composition(SE2.group_inverse(M1), M1), atol = error_tol)
-    assert np.allclose(SE2.group_composition(M1, SE2.group_inverse(M1)), SE2.group_identity(), atol = error_tol)
-    assert np.allclose(SE2.group_action(SE2.group_composition(M1, M2), action_vec), SE2.group_action(M1, SE2.group_action(M2, action_vec)), atol = error_tol)
-    assert np.allclose(M1, SE2.exp(tau1_hat), atol = error_tol)
-    assert np.allclose(M1, SE2.Exp(tau1), atol = error_tol)
-    assert np.allclose(tau1, SE2.compose_cartesian_element(cartesian1_1, cartesian1_2), atol = error_tol)
-    assert np.allclose(tau1_hat, SE2.hat(tau1), atol = error_tol)
-    assert np.allclose(tau1, SE2.vee(tau1_hat), atol = error_tol)
-    assert np.allclose(tau1, SE2.Log(M1), atol = error_tol)
-    assert np.allclose(tau1_hat, SE2.log(M1), atol = error_tol)
-    assert np.allclose(right_plus_M1_tau1, left_plus_M1_tau1, atol = error_tol)
-    assert np.allclose(SE2.adjoint(SE2.Exp(tau1)), SE2.jacobian_left(tau1) @ SE2.jacobian_right_inverse(tau1), atol = error_tol)
-    assert np.allclose(SE2.adjoint(SE2.group_composition(M1, M2)), SE2.adjoint(M1) @ SE2.adjoint(M2), atol = error_tol)
-    assert np.allclose(right_plus_M1_tau1, SE2.plus_left(M1, adjoint_M1 @ tau1), atol = error_tol)
-    if printing: print("\nAll tests passed for SE2 rigid motion group!")
 
-def SE3_rigid_motion_tests(printing = False, try_edge_case = False):
-    if not try_edge_case:
-        tau1 = np.random.randn(6,)
-        tau2 = np.random.randn(6,)
-        action_vec = np.random.randn(4,)
-    else:
-        tau1 = np.random.randn(6,) * small_case_tol
-        tau2 = np.random.randn(6,) * small_case_tol
-        action_vec = np.random.randn(4,) * small_case_tol
+def test_S1_SO2_scalar_groups():
+    rng = np.random.default_rng(0)
+    for _ in range(50):
+        a, b = rng.uniform(-1.5, 1.5, 2); v = rng.standard_normal() + 1j * rng.standard_normal()
+        z1, z2 = S1.Exp(a), S1.Exp(b); R1, R2 = SO2.Exp(a), SO2.Exp(b)
+        assert np.allclose(S1.group_composition(z1, S1.group_inverse(z1)), S1.group_identity())
+        assert np.isclose(S1.Log(z1), a) and np.isclose(SO2.Log(R1), a)
+        assert np.allclose(SO2.group_composition(R1, R2), expm(np.array([[0, -(a + b)], [a + b, 0.]])))
+        assert np.isclose(S1.minus_right(z1, z2), a - b) and np.isclose(SO2.minus_right(R1, R2), a - b)
+        assert np.isclose(S1.jacobian_minus_right_1(z1, z2), 1) and np.isclose(S1.jacobian_minus_right_2(z1, z2), -1)
+        h = 1e-6  # action Jacobian wrt the angle
+        assert np.allclose(S1.jacobian_rotation_action_1(z1, v), (S1.group_action(S1.Exp(a + h), v) - S1.group_action(S1.Exp(a - h), v)) / (2 * h), atol=1e-6)
+        w = rng.standard_normal(2)
+        assert np.allclose(SO2.jacobian_rotation_action_1(R1, w).reshape(-1), (SO2.Exp(a + h) @ w - SO2.Exp(a - h) @ w) / (2 * h), atol=1e-6)
 
-    # printing
-    if printing:
-        print("\n- SE3 rigid motion group printings:")
-        M1 = SE3.group_element(tau1)
-        M2 = SE3.group_element(tau2)
-        tau1_hat = SE3.algebra_element(tau1)
-        cartesian1 = SE3.decompose_cartesian_element(tau1)
-        print(f"tau1:\n {tau1}")
-        print(f"tau2:\n {tau2}")
-        print(f"action_vec:\n {action_vec}")
-        print(f"M1:\n {M1}")
-        print(f"M2:\n {M2}")
-        print(f"tau1_hat:\n {tau1_hat}")
-        print(f"cartesian1:\n {cartesian1}")
-        print(f"inverse_M1:\n {SE3.group_inverse(M1)}")
-        print(f"action_M1:\n {SE3.group_action(M1, action_vec)}")
-        print(f"composition_M1_M2:\n {SE3.group_composition(M1, M2)}")
-        print(f"right_plus_M1_tau1:\n {SE3.plus_right(M1, tau1)}")
-        print(f"left_plus_M1_tau1:\n {SE3.plus_left(M1, tau1)}")
-        print(f"right_minus_M1_M2:\n {SE3.minus_right(M1, M2)}")
-        print(f"left_minus_M1_M2:\n {SE3.minus_left(M1, M2)}")
-        print(f"adjoint_M1:\n {SE3.adjoint(M1)}")
-        print(f"jacobian_inverse_M1:\n {SE3.jacobian_inverse(M1)}")
-        print(f"jacobian_composition_1_M1_M2:\n {SE3.jacobian_composition_1(M1, M2)}")
-        print(f"jacobian_composition_2_M1_M2:\n {SE3.jacobian_composition_2(M1, M2)}")
-        print(f"jacobian_right_tau1:\n {SE3.jacobian_right(tau1)}")
-        print(f"jacobian_right_inverse_tau1:\n {SE3.jacobian_right_inverse(tau1)}")
-        print(f"jacobian_left_tau1:\n {SE3.jacobian_left(tau1)}")
-        print(f"jacobian_left_inverse_tau1:\n {SE3.jacobian_left_inverse(tau1)}")
-        print(f"jacobian_plus_right_1_M1_tau1:\n {SE3.jacobian_plus_right_1(M1, tau1)}")
-        print(f"jacobian_plus_right_2_M1_tau1:\n {SE3.jacobian_plus_right_2(M1, tau1)}")
-        print(f"jacobian_minus_right_1_M1_M2:\n {SE3.jacobian_minus_right_1(M1, M2)}")
-        print(f"jacobian_minus_right_2_M1_M2:\n {SE3.jacobian_minus_right_2(M1, M2)}")
-        print(f"jacobian_motion_action_1_M1:\n {SE3.jacobian_motion_action_1(M1, action_vec)}")
-        print(f"jacobian_motion_action_2_M1:\n {SE3.jacobian_motion_action_2(M1, action_vec)}")
 
-    # testing
-    if printing: print("\n- SE3 rigid motion group testings:")
-    M1 = SE3.group_element(tau1)
-    M2 = SE3.group_element(tau2)
-    tau1_hat = SE3.algebra_element(tau1)
-    cartesian1_1, cartesian1_2, cartesian1_3 = SE3.decompose_cartesian_element(tau1)
-    inverse_M1 = SE3.group_inverse(M1)
-    action_M1 = SE3.group_action(M1, action_vec)
-    composition_M1_M2 = SE3.group_composition(M1, M2)
-    right_plus_M1_tau1 = SE3.plus_right(M1, tau1)
-    left_plus_M1_tau1 = SE3.plus_left(M1, tau1)
-    right_minus_M1_M2 = SE3.minus_right(M1, M2)
-    left_minus_M1_M2 = SE3.minus_left(M1, M2)
-    adjoint_M1 = SE3.adjoint(M1)
-    jacobian_inverse_M1 = SE3.jacobian_inverse(M1)
-    jacobian_composition_1_M1_M2 = SE3.jacobian_composition_1(M1, M2)
-    jacobian_composition_2_M1_M2 = SE3.jacobian_composition_2(M1, M2)
-    jacobian_right_tau1 = SE3.jacobian_right(tau1)
-    jacobian_right_inverse_tau1 = SE3.jacobian_right_inverse(tau1)
-    jacobian_left_tau1 = SE3.jacobian_left(tau1)
-    jacobian_left_inverse_tau1 = SE3.jacobian_left_inverse(tau1)
-    jacobian_plus_right_1_M1_tau1 = SE3.jacobian_plus_right_1(M1, tau1)
-    jacobian_plus_right_2_M1_tau1 = SE3.jacobian_plus_right_2(M1, tau1)
-    jacobian_minus_right_1_M1_M2 = SE3.jacobian_minus_right_1(M1, M2)
-    jacobian_minus_right_2_M1_M2 = SE3.jacobian_minus_right_2(M1, M2)
-    jacobian_motion_action_1_M1 = SE3.jacobian_motion_action_1(M1, action_vec)
-    jacobian_motion_action_2_M1 = SE3.jacobian_motion_action_2(M1, action_vec)
-    assert np.allclose(SE3.group_composition(M1, SE3.group_inverse(M1)), SE3.group_composition(SE3.group_inverse(M1), M1), atol = error_tol)
-    assert np.allclose(SE3.group_composition(M1, SE3.group_inverse(M1)), SE3.group_identity(), atol = error_tol)
-    assert np.allclose(SE3.group_action(SE3.group_composition(M1, M2), action_vec), SE3.group_action(M1, SE3.group_action(M2, action_vec)), atol = error_tol)
-    assert np.allclose(M1, SE3.exp(tau1_hat), atol = error_tol)
-    assert np.allclose(M1, SE3.Exp(tau1), atol = error_tol)
-    assert np.allclose(tau1, SE3.compose_cartesian_element(cartesian1_1, cartesian1_2, cartesian1_3), atol = error_tol)
-    assert np.allclose(tau1_hat, SE3.hat(tau1), atol = error_tol)
-    assert np.allclose(tau1, SE3.vee(tau1_hat), atol = error_tol)
-    assert np.allclose(tau1, SE3.Log(M1), atol = error_tol)
-    assert np.allclose(tau1_hat, SE3.log(M1), atol = error_tol)
-    assert np.allclose(right_plus_M1_tau1, left_plus_M1_tau1, atol = error_tol)
-    assert np.allclose(SE3.adjoint(SE3.Exp(tau1)), SE3.jacobian_left(tau1) @ SE3.jacobian_right_inverse(tau1), atol = error_tol)
-    assert np.allclose(SE3.adjoint(SE3.group_composition(M1, M2)), SE3.adjoint(M1) @ SE3.adjoint(M2), atol = error_tol)
-    assert np.allclose(right_plus_M1_tau1, SE3.plus_left(M1, adjoint_M1 @ tau1), atol = error_tol)
-    if printing: print("\nAll tests passed for SE3 rigid motion group!")
+def test_SO3_log_robustness():
+    assert np.allclose(SO3.Log(np.eye(3) * (1 + 2e-16)), 0)            # used to return NaN
+    for ax in ([1, -1, 0], [0, -1, 0], [1, -1, -1], [0, 0, 1]):         # rotations by exactly pi
+        ax = np.array(ax, float); ax /= np.linalg.norm(ax); R = expm(vh(ax * np.pi))
+        assert np.allclose(expm(vh(SO3.Log(R))), R, atol=1e-9)
+        assert np.allclose(S3.Rq_mat(SO3.qR_quat(R)), R, atol=1e-9)
+    q = np.array([np.cos(.4), *(np.sin(.4) * np.array([1, 2, 3.]) / np.sqrt(14))])
+    assert np.allclose(S3.Log(-q), S3.Log(q))                          # q and -q are the same rotation
+    assert np.linalg.norm(S3.Log(-q)) <= np.pi + 1e-12
 
-def T_translation_tests(printing = False, try_edge_case = False):
-    n = 3
-    if not try_edge_case:
-        t1 = np.random.randn(n,)
-        t2 = np.random.randn(n,)
-        action_vec = np.random.randn(n + 1,)
-    else:
-        t1 = np.random.randn(n,) * small_case_tol
-        t2 = np.random.randn(n,) * small_case_tol
-        action_vec = np.random.randn(n + 1,) * small_case_tol
 
-    # printing
-    if printing:
-        print("\n- T translation group printings:")
-        T1 = T.group_element(t1)
-        T2 = T.group_element(t2)
-        t1_hat = T.algebra_element(t1)
-        cartesian1 = T.decompose_cartesian_element(t1)
-        print(f"t1:\n {t1}")
-        print(f"t2:\n {t2}")
-        print(f"action_vec:\n {action_vec}")
-        print(f"T1:\n {T1}")
-        print(f"T2:\n {T2}")
-        print(f"t1_hat:\n {t1_hat}")
-        print(f"cartesian1:\n {cartesian1}")
-        print(f"inverse_T1:\n {T.group_inverse(T1)}")
-        print(f"action_T1:\n {T.group_action(T1, action_vec)}")
-        print(f"composition_T1_T2:\n {T.group_composition(T1, T2)}")
-        print(f"right_plus_T1_t1:\n {T.plus_right(T1, t1)}")
-        print(f"left_plus_T1_t1:\n {T.plus_left(T1, t1)}")
-        print(f"right_minus_T1_T2:\n {T.minus_right(T1, T2)}")
-        print(f"left_minus_T1_T2:\n {T.minus_left(T1, T2)}")
-        print(f"adjoint_T1:\n {T.adjoint(T1)}")
-        print(f"jacobian_inverse_T1:\n {T.jacobian_inverse(T1)}")
-        print(f"jacobian_composition_1_T1_T2:\n {T.jacobian_composition_1(T1, T2)}")
-        print(f"jacobian_composition_2_T1_T2:\n {T.jacobian_composition_2(T1, T2)}")
-        print(f"jacobian_right_t1:\n {T.jacobian_right(t1)}")
-        print(f"jacobian_right_inverse_t1:\n {T.jacobian_right_inverse(t1)}")
-        print(f"jacobian_left_t1:\n {T.jacobian_left(t1)}")
-        print(f"jacobian_left_inverse_t1:\n {T.jacobian_left_inverse(t1)}")
-        print(f"jacobian_plus_right_1_T1_t1:\n {T.jacobian_plus_right_1(T1, t1)}")
-        print(f"jacobian_plus_right_2_T1_t1:\n {T.jacobian_plus_right_2(T1, t1)}")
-        print(f"jacobian_minus_right_1_T1_T2:\n {T.jacobian_minus_right_1(T1, T2)}")
-        print(f"jacobian_minus_right_2_T1_T2:\n {T.jacobian_minus_right_2(T1, T2)}")
-        print(f"jacobian_translation_action_1_T1:\n {T.jacobian_translation_action_1(T1, action_vec)}")
-        print(f"jacobian_translation_action_2_T1:\n {T.jacobian_translation_action_2(T1, action_vec)}")
+def test_T_plus_minus_semantics():
+    T1, T2 = T.Exp(np.array([3., 3, 3])), T.Exp(np.array([1., 1, 1]))
+    assert T.plus_right(T1, np.ones(3)).shape == (4, 4)
+    assert np.allclose(T.minus_right(T1, T2), [2, 2, 2]) and np.allclose(T.minus_left(T1, T2), [2, 2, 2])
 
-    # testing
-    if printing: print("\n- T translation group testings:")
-    T1 = T.group_element(t1)
-    T2 = T.group_element(t2)
-    t1_hat = T.algebra_element(t1)
-    cartesian1 = T.decompose_cartesian_element(t1)
-    inverse_T1 = T.group_inverse(T1)
-    action_T1 = T.group_action(T1, action_vec)
-    composition_T1_T2 = T.group_composition(T1, T2)
-    right_plus_T1_t1 = T.plus_right(T1, t1)
-    left_plus_T1_t1 = T.plus_left(T1, t1)
-    right_minus_T1_T2 = T.minus_right(T1, T2)
-    left_minus_T1_T2 = T.minus_left(T1, T2)
-    adjoint_T1 = T.adjoint(T1)
-    jacobian_inverse_T1 = T.jacobian_inverse(T1)
-    jacobian_composition_1_T1_T2 = T.jacobian_composition_1(T1, T2)
-    jacobian_composition_2_T1_T2 = T.jacobian_composition_2(T1, T2)
-    jacobian_right_t1 = T.jacobian_right(t1)
-    jacobian_right_inverse_t1 = T.jacobian_right_inverse(t1)
-    jacobian_left_t1 = T.jacobian_left(t1)
-    jacobian_left_inverse_t1 = T.jacobian_left_inverse(t1)
-    jacobian_plus_right_1_T1_t1 = T.jacobian_plus_right_1(T1, t1)
-    jacobian_plus_right_2_T1_t1 = T.jacobian_plus_right_2(T1, t1)
-    jacobian_minus_right_1_T1_T2 = T.jacobian_minus_right_1(T1, T2)
-    jacobian_minus_right_2_T1_T2 = T.jacobian_minus_right_2(T1, T2)
-    jacobian_translation_action_1_T1 = T.jacobian_translation_action_1(T1, action_vec)
-    jacobian_translation_action_2_T1 = T.jacobian_translation_action_2(T1, action_vec)
-    assert np.allclose(T.group_composition(T1, T.group_inverse(T1)), T.group_composition(T.group_inverse(T1), T1), atol = error_tol)
-    assert np.allclose(T.group_composition(T1, T.group_inverse(T1)), T.group_identity(n), atol = error_tol)
-    assert np.allclose(T.group_action(T.group_composition(T1, T2), action_vec), T.group_action(T1, T.group_action(T2, action_vec)), atol = error_tol)
-    assert np.allclose(T1, T.exp(t1_hat), atol = error_tol)
-    assert np.allclose(T1, T.Exp(t1), atol = error_tol)
-    assert np.allclose(t1, T.compose_cartesian_element(cartesian1), atol = error_tol)
-    assert np.allclose(t1_hat, T.hat(t1), atol = error_tol)
-    assert np.allclose(t1, T.vee(t1_hat), atol = error_tol)
-    assert np.allclose(t1, T.Log(T1), atol = error_tol)
-    assert np.allclose(t1_hat, T.log(T1), atol = error_tol)
-    assert np.allclose(right_plus_T1_t1, left_plus_T1_t1, atol = error_tol)
-    assert np.allclose(T.adjoint(T.Exp(t1)), T.jacobian_left(t1) @ T.jacobian_right_inverse(t1), atol = error_tol)
-    assert np.allclose(T.adjoint(T.group_composition(T1, T2)), T.adjoint(T1) @ T.adjoint(T2), atol = error_tol)
-    assert np.allclose(right_plus_T1_t1, T.plus_left(T1, adjoint_T1 @ t1), atol = error_tol)
-    if printing: print("\nAll tests passed for T translation group!")
+
+def _make_test(name, regime):
+    def t():
+        f = check_group(name, regime)
+        assert not f, "\n".join(f)
+    t.__name__ = f"test_{name}_{regime}"
+    return t
+
+for _n in ("SO3", "S3", "SE3", "SE2", "T"):
+    for _r in (REGIMES if _n != "T" else ("normal",)):
+        globals()[f"test_{_n}_{_r}"] = _make_test(_n, _r)
 
 
 if __name__ == "__main__":
-    parser = argparse.ArgumentParser(description = "Run Lie Algebra Groups (rotations, translations and rigid motions) tests.")
-    parser.add_argument(
-        "-p", "--print",
-        action = "store_true",
-        help = "Print detailed test results."
-    )
-    parser.add_argument(
-        "-e", "--edge",
-        action = "store_true",
-        help = "Try edge-case tests."
-    )
-
-    # np.random.seed(0)
-    small_case_tol = tolerances.small_case_tol
-    error_tol = tolerances.error_tol
-
-    args = parser.parse_args()
-    print_test_results = args.print
-    try_edge_case = args.edge
-
-    success_counter = 0
-    tries = 1000
-    for k in range(tries):
-        try:
-            S1_rotation_tests(printing = print_test_results, try_edge_case = try_edge_case)
-            S3_rotation_tests(printing = print_test_results, try_edge_case = try_edge_case)
-            SO2_rotation_tests(printing = print_test_results, try_edge_case = try_edge_case)
-            SO3_rotation_tests(printing = print_test_results, try_edge_case = try_edge_case)
-            SE2_rigid_motion_tests(printing = print_test_results, try_edge_case = try_edge_case)
-            SE3_rigid_motion_tests(printing = print_test_results, try_edge_case = try_edge_case)
-            T_translation_tests(printing = print_test_results, try_edge_case = try_edge_case)
-            # print(f"\nTry {k + 1}: ALL tests passed for all groups tested!")
-            success_counter += 1
-        except AssertionError as e:
-            # print(f"\nTry {k + 1}: NOT All tests passed for all groups tested!")
-            # traceback.print_exc()
-            pass
-    print(f"\nSuccess rate = {success_counter / tries * 100.0} %")
+    total_fail = 0
+    for k, f in sorted(globals().items()):
+        if k.startswith("test_") and callable(f):
+            try:
+                f(); print(f"PASS  {k}")
+            except AssertionError as e:
+                total_fail += 1; print(f"FAIL  {k}\n      " + str(e).replace("\n", "\n      "))
+    print("\nALL TESTS PASSED" if total_fail == 0 else f"\n{total_fail} TEST(S) FAILED")
+    sys.exit(1 if total_fail else 0)

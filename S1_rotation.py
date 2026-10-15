@@ -2,7 +2,7 @@ import numpy as np
 import tolerances
 
 
-'''
+r'''
 theta is the cartesian space element
 z = np.cos(theta) + i * np.sin(theta) is the group element
 tau_hat = i * theta is the algebra element
@@ -10,11 +10,10 @@ tau_hat = i * theta is the algebra element
 tol = tolerances.small_case_tol  # tolerance for numerical issues
 
 def group_element(theta):
-    z = np.cos(theta) + 1j * np.sin(theta)
-    return z
+    return np.exp(1j * theta)
 
 def group_identity():
-    return np.array([1.])
+    return np.array([1. + 0.j])
 
 def group_composition(z1, z2):
     return z1 * z2
@@ -44,9 +43,7 @@ def vee(tau_hat):
     return theta
 
 def exp(tau_hat):
-    theta = -1j * tau_hat
-    z = np.cos(theta) + 1j * np.sin(theta)
-    return z
+    return np.exp(tau_hat)  # tau_hat = i*theta, so exp(tau_hat) = cos(theta) + i*sin(theta)
 
 def log(z):
     theta = np.angle(z)

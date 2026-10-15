@@ -2,7 +2,7 @@ import numpy as np
 import tolerances
 
 
-'''
+r'''
 theta is the cartesian space element, where theta is the angle in radians
 R = [cos(theta), -sin(theta); sin(theta), cos(theta)] is the group element
 theta_hat = [0, -theta; theta, 0] is the algebra element
